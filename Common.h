@@ -5,8 +5,8 @@
 #ifndef MPI_HAMSTER_KILLERS_COMMON_H
 #define MPI_HAMSTER_KILLERS_COMMON_H
 
-typedef enum {HIRE, READ_GANDHI} landlord_state_t;
-typedef enum {PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH} elf_state_t;
+typedef enum { HIRE, READ_GANDHI } landlord_state_t;
+typedef enum { PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH } elf_state_t;
 
 #define CONTRACTS 1
 #define REQUEST_FOR_CONTRACT 2
@@ -30,33 +30,51 @@ MPI_Datatype MPI_DELEGATE_PRIORITY_T;
 MPI_Datatype MPI_SWAP_T;
 
 struct contract {
-    int id;
-    int num_hamsters;
+  int contract_id;
+  int num_hamsters;
 };
 
 struct request_for_contract {
-    int lamport_clock;
-    int blood_hunger;
+  int lamport_clock;
+  int blood_hunger;
+  bool operator<(const request_for_contract &rhs) const {
+    return (blood_hunger == rhs.blood_hunger) ?
+           (lamport_clock < rhs.lamport_clock) :
+           (blood_hunger > rhs.blood_hunger);
+  }
 };
 
 struct contract_queue_item {
-    int rank;
-    struct request_for_contract rfc;
-    bool operator<(const contract_queue_item& rhs) const
-    {
-        return (rfc.blood_hunger == rhs.rfc.blood_hunger) ?
-               (rfc.lamport_clock > rhs.rfc.lamport_clock) :
-               (rfc.blood_hunger < rhs.rfc.blood_hunger);
-    }
+  int rank;
+  struct request_for_contract rfc;
+  bool operator<(const contract_queue_item &rhs) const {
+    return rfc < rhs.rfc;
+  }
 };
 
 struct request_for_armor {
-    int clock;
-    int contract_id;
+  int lamport_clock;
+  int contract_id;
+  bool operator<(const request_for_armor &rhs) const {
+    return lamport_clock < rhs.lamport_clock;
+  }
+};
+
+struct armory_allocation_item {
+  int rank;
+  struct request_for_armor rfa;
+  bool operator<(const armory_allocation_item &rhs) const {
+    return rfa < rhs.rfa;
+  }
+};
+
+struct contract_completed {
+  int contract_id;
 };
 
 struct swap_proc {
-    int indexes[2];
+  int rank_who_delegates;
+  int rank_to_whom_delegated;
 };
 
 #endif //MPI_HAMSTER_KILLERS_COMMON_H
