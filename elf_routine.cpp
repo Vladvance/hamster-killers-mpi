@@ -58,7 +58,7 @@ void elf_routine(const int size, const int rank) {
 
         // Send REQUEST_FOR_CONTRACT to the rest of elves
         for (int dst_rank = 1; dst_rank < size; ++dst_rank) {
-          rfc_msg.lamport_clock = ++lamport_clock; //??
+          rfc_msg.lamport_clock_ = ++lamport_clock; //??
           if (dst_rank == rank) {
             contract_queue[0] = {rank, {lamport_clock, blood_hunger}};
             debug("Added my contract data to contract_queue")
@@ -83,10 +83,10 @@ void elf_routine(const int size, const int rank) {
                    &status);
 
           contract_queue[queue_idx].rank = status.MPI_SOURCE;
-          lamport_clock = std::max(lamport_clock, contract_queue[queue_idx].rfc.lamport_clock) + 1;
+          lamport_clock = std::max(lamport_clock, contract_queue[queue_idx].rfc.lamport_clock_) + 1;
 
           debug("Received REQUEST_FOR_CONTRACT [ LAMPORT_CLOCK: %d ] from ELF %d",
-                contract_queue[queue_idx].rfc.lamport_clock,
+                contract_queue[queue_idx].rfc.lamport_clock_,
                 contract_queue[queue_idx].rank)
         }
 
@@ -94,7 +94,7 @@ void elf_routine(const int size, const int rank) {
         std::partial_sort(contract_queue.begin(), last_contract_it, contract_queue.end());
         debug("Contract queue:")
         for(auto& c : contract_queue)
-          debug("[ RANK: %d, LAMPORT_CLOCK: %d]", c.rank, c.rfc.lamport_clock)
+          debug("[ RANK: %d, LAMPORT_CLOCK: %d]", c.rank, c.rfc.lamport_clock_)
         auto position_in_queue = std::find_if(contract_queue.begin(), contract_queue.end(),
                                               [=](const contract_queue_item &item) {
                                                 return item.rank == rank;
