@@ -7,6 +7,6 @@
 
 #include <mpl/mpl.hpp>
 
-void landlord_routine(int size, int rank);
+void landlord_routine(const mpl::communicator &comm_world);
 
 #endif // LANDLORD_ROUTINE_H_

@@ -1,7 +1,7 @@
 #include <mpl/mpl.hpp>
 
 #include "landlord_routine.h"
-#include "gnome_routine.h"
+#include "gnome.h"
 #include "common.h"
 #include "ascii_art.h"
 #include <csignal>
@@ -33,7 +33,8 @@ int main(int argc, char **argv) {
   if (comm_world.rank() == LANDLORD_RANK) { //if landlord
     landlord_routine(comm_world);
   } else { //if gnome
-    gnome_routine(comm_world);
+    gnome gnome(mpl::environment::comm_world());
+    gnome.run();
   }
 
   return EXIT_SUCCESS;
