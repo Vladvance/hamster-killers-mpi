@@ -4,24 +4,27 @@
 
 #include <random>
 #include <vector>
-#include <mpi.h>
+#include <mpl/mpl.hpp>
 
 #include "common.h"
 #include "mpi_types.h"
 
 
-void landlord_routine(int size, int rank) {
-  debug("I'm alive!")
+void landlord_routine(const mpl::communicator &comm_world) {
 
+  const int size = comm_world.size();
+  const int rank = comm_world.rank();
+  const int lamport_clock = 0; //dummy
   std::random_device gen;
-  std::uniform_int_distribution<int> rand_hamster_num(1, MAX_HAMSTERS_IN_CONTRACTS);
+  std::uniform_int_distribution<int> rand_hamster_num(1, MAX_HAMSTERS_PER_CONTRACT);
   std::uniform_int_distribution<int> rand_contracts_num(1, size - 1);
-  MPI_Status status;
-
 
   std::vector<struct contract> contracts;
   std::vector<bool> contracts_completed_flags;
   int contracts_num;
+
+
+  debug("I'm alive!")
 
   int state = HIRE;
 
@@ -29,7 +32,7 @@ void landlord_routine(int size, int rank) {
     switch (state) {
       case HIRE: {
 
-        // Num of contracts equal num of elves, FOR TESTING PURPOSE
+        // Num of contracts equal num of gnomes, FOR TESTING PURPOSE
         contracts_num = size - 1;
 //                    contracts_num = rand_contracts_num(gen);
         contracts.resize(contracts_num);
@@ -44,28 +47,28 @@ void landlord_routine(int size, int rank) {
         debug("Total num of contracts in this wave: %d", contracts_num)
         debug("There are %d swords and %d poison kits available.", NUM_OF_SWORDS, NUM_OF_POISON_KITS)
 
-        // Send contracts to elves
+        // Send contracts to gnomes
+//        comm_world.bcast(LANDLORD_RANK, contracts.begin(), contracts.end());
+        debug("Broadcasting contract list.")
         for (int dst_rank = 1; dst_rank < size; ++dst_rank) {
-          debug("Sending contract list to ELF %d.", dst_rank)
-          MPI_Send(contracts.data(), contracts_num, MPI_CONTRACT_T, dst_rank, CONTRACTS, MPI::COMM_WORLD);
+          debug("Sending contract list to GNOME %d.", dst_rank)
+          comm_world.send(contracts.begin(), contracts.end(), dst_rank, CONTRACTS);
         }
 
-//        state = READ_GANDHI;
-        state = FINISH;
+        state = READ_GANDHI;
+//        state = FINISH;
         break;
       }
       case READ_GANDHI: {
-        struct contract_completed cc_msg{};
-        for (int i = 0; i < contracts_num; ++i) {
-          MPI_Recv(&cc_msg, 1, MPI_CONTRACT_COMPETED_T, MPI_ANY_SOURCE, CONTRACT_COMPLETED,
-                   MPI::COMM_WORLD,
-                   &status);
-          debug("I was informed that ELF %d has murdered all %d hamsters and so completed his contract (ID : %d)",
-                status.MPI_SOURCE,
-                contracts[cc_msg.contract_id].num_hamsters,
-                cc_msg.contract_id)
-          contracts_completed_flags[cc_msg.contract_id] = true;
+        std::vector<contract_completed> completed_contracts(contracts_num);
 
+        for (auto& contract: completed_contracts) {
+          const auto& status = comm_world.recv(contract, mpl::any_source, CONTRACT_COMPLETED);
+          debug("I was informed that GNOME %d has murdered all %d hamsters and so completed his contract (ID : %d)",
+                status.source(),
+                contracts[contract.contract_id].num_hamsters,
+                contract.contract_id)
+          contracts_completed_flags[contract.contract_id] = true;
         }
         state = FINISH;
         break;

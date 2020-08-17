@@ -49,8 +49,9 @@ namespace mpl {
     template<typename T>
     struct is_valid_tag {
       static constexpr bool value =
+//          (std::is_enum<T>::value);
           (std::is_enum<T>::value) and
-          (not is_narrowing<typename underlying_type<T>::type, int>::value);
+          (not is_narrowing<typename underlying_type<T>::type, unsigned int>::value);
     };
 
     template<typename T>

@@ -10,7 +10,7 @@ namespace mpl {
 
   class tag {
   private:
-    int t = 0;
+    int t = MPI_ANY_TAG;
 
   public:
     tag() = default;

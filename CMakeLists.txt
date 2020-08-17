@@ -3,7 +3,7 @@ project(MPI_hamster_killers VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(MPI_hamster_killers main.cpp elf_routine.cpp landlord_routine.cpp mpi_types.cpp common.cpp)
+add_executable(MPI_hamster_killers main.cpp gnome_routine.cpp landlord_routine.cpp mpi_types.cpp common.cpp)
 include_directories(./include)
 find_package(MPI REQUIRED)
 

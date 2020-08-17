@@ -7,26 +7,31 @@
 
 typedef enum { HIRE, READ_GANDHI } landlord_state_t;
 typedef enum { PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH } elf_state_t;
+enum msg_type_t { CONTRACTS, REQUEST_FOR_CONTRACT, REQUEST_FOR_ARMOR, ALLOCATE_ARMOR, CONTRACT_COMPLETED, DELEGATE_PRIORITY, SWAP };
 
-#define CONTRACTS 1
-#define REQUEST_FOR_CONTRACT 2
-#define REQUEST_FOR_ARMOR 3
-#define ALLOCATE_ARMOR 4
-#define CONTRACT_COMPLETED 5
-#define DELEGATE_PRIORITY 6
-#define SWAP 7
+//#define CONTRACTS 1
+//#define REQUEST_FOR_CONTRACT 2
+//#define REQUEST_FOR_ARMOR 3
+//#define ALLOCATE_ARMOR 4
+//#define CONTRACT_COMPLETED 5
+//#define DELEGATE_PRIORITY 6
+//#define SWAP 7
 
 #define LANDLORD_RANK 0
-#define MAX_HAMSTERS_IN_CONTRACTS 20
-#define NUM_OF_POISON_KITS 50
+#define MAX_HAMSTERS_PER_CONTRACT 20
+#define NUM_OF_POISON_KITS 30
 #define NUM_OF_SWORDS 10
+#define CONTRACTID_UNDEFINED -1
 
 #define DEBUG
 
 #ifdef DEBUG
-#define debug(FORMAT,...) std::printf("%c[%d;%dm [%8s %d]: " FORMAT "%c[%d;%dm\n",  27,  (1+(rank/7))%2, 31+(6+rank)%7, (rank==0) ? "LANDLORD" : "ELF", rank, ##__VA_ARGS__, 27,0,37);
+#define debug(FORMAT,...) std::printf("%c[%d;%dm [%8s %2d (%2d)]: " FORMAT "%c[%d;%dm\n",  27,  (1+(rank/7))%2, 31+(6+rank)%7, (rank==0) ? "LANDLORD" : "GNOME", rank, lamport_clock, ##__VA_ARGS__, 27,0,37);
+// 2 color debug messages
+#define debug_2c(FORMAT, FORMAT2, second_rank, ...) std::printf("%c[%d;%dm [%8s %2d (%2d)]: " FORMAT "%c[%d;%dm" FORMAT2 "%c[%d;%dm\n",  27,  (1+(rank/7))%2, 31+(6+rank)%7, (rank==0) ? "LANDLORD" : "GNOME", rank, lamport_clock, 27, (1+(second_rank/7))%2, 31+(6+second_rank)%7, ##__VA_ARGS__, second_rank, 27,0,37);
 #else
 #define debug(...) ;
+#define debug_2c(...) ;
 #endif
 
 #define P_WHITE printf("%c[%d;%dm",27,1,37);

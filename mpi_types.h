@@ -9,77 +9,65 @@
 
 
 struct contract {
-  int contract_id{};
-  int num_hamsters{};
-
-  contract(int contract_id, int num_hamsters)
-  : contract_id(contract_id), num_hamsters(num_hamsters) {}
+  int contract_id;
+  int num_hamsters;
 };
 
-std::ostream& operator<<(std::ostream& stream, const contract &str) {
-  stream << "[ CID:" << str.contract_id << ", NUM_HAMSTERS: " << str.num_hamsters << " ]";
-  return stream;
-}
-
 struct request_for_contract {
-  int lamport_clock = 0;
-  int blood_hunger = 0;
-
-  request_for_contract(int lamport_clock, int blood_hunger)
-      : lamport_clock(lamport_clock), blood_hunger(blood_hunger) {}
+  int lamport_clock;
+  int blood_hunger;
 
   bool operator<(const request_for_contract &rhs) const {
     return (blood_hunger == rhs.blood_hunger) ?
-           (lamport_clock == rhs.lamport_clock) :
-           (blood_hunger > rhs.blood_hunger);
+           (lamport_clock < rhs.lamport_clock) :
+           (blood_hunger < rhs.blood_hunger);
   }
 
   bool operator==(const request_for_contract &rhs) const {
     return(blood_hunger == rhs.blood_hunger && lamport_clock == rhs.lamport_clock);
   }
-
 };
 
-std::ostream& operator<<(std::ostream& stream, const request_for_contract &str) {
-  stream << "[ LCLOCK:" << str.lamport_clock << ", BLOOD_HUNGER: " << str.blood_hunger << " ]";
-  return stream;
-}
-
 struct contract_queue_item {
-  int rank{};
+  int rank;
   struct request_for_contract rfc;
-
-  contract_queue_item(int rank, const request_for_contract &rfc) : rank(rank), rfc(rfc) {}
 
   bool operator<(const contract_queue_item &rhs) const {
     return (rfc == rhs.rfc) ?
            (rank < rhs.rank) :
            (rfc < rhs.rfc);
   }
-
 };
 
 struct request_for_armor {
-  int lamport_clock{};
-  int contract_id{};
-
-  request_for_armor(int lamport_clock, int contract_id) : lamport_clock(lamport_clock), contract_id(contract_id) {}
+  int lamport_clock;
+  int contract_id;
 
   bool operator<(const request_for_armor &rhs) const {
     return lamport_clock < rhs.lamport_clock;
   }
+
+  bool operator==(const request_for_armor &rhs) const {
+    return lamport_clock == rhs.lamport_clock;
+  }
 };
 
 struct armory_allocation_item {
-  int rank{};
-  struct request_for_armor rfa{};
-
-  armory_allocation_item(int rank, const request_for_armor &rfa) : rank(rank), rfa(rfa) {}
+  armory_allocation_item() = default;
+  armory_allocation_item(const int rank, const request_for_armor& rfa) : rank(rank), rfa(rfa) {}
+  int rank;
+  struct request_for_armor rfa;
 
   bool operator<(const armory_allocation_item &rhs) const {
-    return rfa < rhs.rfa;
+    return (rfa == rhs.rfa) ?
+            rank < rhs.rank :
+            rfa < rhs.rfa;
   }
 };
+
+struct allocate_armor {};
+
+struct delegate_priority {};
 
 struct contract_completed {
   int contract_id;
@@ -149,10 +137,32 @@ class struct_builder<armory_allocation_item> : public base_struct_builder<armory
   struct_layout<armory_allocation_item> layout_;
  public:
   struct_builder() : base_struct_builder() {
-    armory_allocation_item str;
+    armory_allocation_item str{};
     layout_.register_struct(str);
     layout_.register_element(str.rank);
     layout_.register_element(str.rfa);
+    define_struct(layout_);
+  }
+};
+
+template<>
+class struct_builder<allocate_armor> : public base_struct_builder<allocate_armor> {
+  struct_layout<allocate_armor> layout_;
+ public:
+  struct_builder() : base_struct_builder() {
+    allocate_armor str{};
+    layout_.register_struct(str);
+    define_struct(layout_);
+  }
+};
+
+template<>
+class struct_builder<delegate_priority> : public base_struct_builder<delegate_priority> {
+  struct_layout<delegate_priority> layout_;
+ public:
+  struct_builder() : base_struct_builder() {
+    delegate_priority str{};
+    layout_.register_struct(str);
     define_struct(layout_);
   }
 };
@@ -181,7 +191,6 @@ class struct_builder<swap_proc> : public base_struct_builder<swap_proc> {
     define_struct(layout_);
   }
 };
-
 }
 
 #endif //MPI_TYPES_H_
