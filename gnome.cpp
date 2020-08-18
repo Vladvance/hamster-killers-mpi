@@ -6,11 +6,11 @@
 #include <random>
 #include <vector>
 #include <mpl/mpl.hpp>
+#include <zconf.h>
 
 #include "common.h"
 #include "mpi_types.h"
 #include "gnome.h"
-
 
 void gnome::run() {
 
@@ -23,7 +23,7 @@ void gnome::run() {
     switch (state) {
       case PEACE_IS_A_LIE: {
         lamport_clock = 0;
-        std::fill(completed_contracts.begin(), completed_contracts.end(), false);
+        std::fill(is_completed.begin(), is_completed.end(), false);
         std::fill(ranks_in_rampage.begin(), ranks_in_rampage.end(), false);
 
         contracts_num = get_contracts_from_landlord();
@@ -46,10 +46,9 @@ void gnome::run() {
         for (const auto &c : contract_queue)
           debug("[ RANK: %d; LAMPORT_CLOCK: %d; BLOOD_HUNGER: %d]", c.rank, c.rfc.lamport_clock, c.rfc.blood_hunger)
 
-        // If we didn't get contract, increase blood_hunger and change state to PEACE_IS_A_LIE
+        // If we didn't get a contract, increase blood_hunger and change state to PEACE_IS_A_LIE
         if (my_contract_id == CONTRACTID_UNDEFINED) {
           debug("No work for me. Gonna rest a bit.")
-
           blood_hunger++;
 //          state = PEACE_IS_A_LIE;
           state = FINISH;
@@ -58,7 +57,7 @@ void gnome::run() {
 
         debug("Determined my contract id: %d", my_contract_id)
 
-        // If we got contract, send REQUEST_FOR_ARMOR to all processes with contracts
+        // If we got a contract, send REQUEST_FOR_ARMOR to all gnomes with contracts
         broadcast_rfa();
 
         debug("Gonna take some stuff from armoury.")
@@ -80,31 +79,22 @@ void gnome::run() {
 
         switch (static_cast<int>(status.tag())) {
           case REQUEST_FOR_ARMOR: {
-
             receive_rfa(status.source());
-
             // If armory_queue is complete, calculate swords_needed and poison_kits_needed.
             if (armory_queue.size() == contracts_num) {
-
-              std::sort(armory_queue.begin(), armory_queue.end());
-              debug("armory_queue is complete.")
-              for(const auto& item: armory_queue)
-                debug("[ CLOCK: %d; CONTRACT_ID: %d, RANK: %d ]", item.rfa.lamport_clock, item.rfa.contract_id, item.rank)
-              const auto my_pos = std::find_if(armory_queue.begin(),
-                                               armory_queue.end(),
-                                               [=](const auto &item) { return item.rank == rank; });
-
+              const auto my_pos = aa_queue_find_position();
               swords_needed = std::distance(armory_queue.begin(), my_pos);
               poison_kits_needed = std::accumulate(armory_queue.begin(),
                                                    my_pos, 0, [&](int sum, const auto &item) {
-                    return (completed_contracts[item.rfa.contract_id]) ? sum : sum + contracts[item.rfa.contract_id].num_hamsters;
+                    return (is_completed[item.rfa.contract_id]) ? sum : sum
+                        + contracts[item.rfa.contract_id].num_hamsters;
                   });
-
               const int my_pos_idx = std::distance(armory_queue.begin(), my_pos);
-
-              debug("My position in aa_queue = %d, swords_needed = %d, poison_kits_needed = %d", my_pos_idx, swords_needed, poison_kits_needed)
+              debug("My position in armory_queue = %d, swords_needed = %d, poison_kits_needed = %d",
+                    my_pos_idx,
+                    swords_needed,
+                    poison_kits_needed)
             }
-
             break;
           }
           case ALLOCATE_ARMOR: {
@@ -116,15 +106,12 @@ void gnome::run() {
             break;
           }
           case CONTRACT_COMPLETED: {
-
             struct contract_completed cc_msg{};
             comm_world.recv(cc_msg, status.source(), CONTRACT_COMPLETED);
-
             debug("Received CONTRACT_COMPLETED from GNOME %d.",
                   status.source())
-
-            if(armory_queue.size() < contracts_num) {
-              completed_contracts[cc_msg.contract_id] = true;
+            if (armory_queue.size() < contracts_num) {
+              is_completed[cc_msg.contract_id] = true;
               continue;
             }
             swords_needed--;
@@ -135,30 +122,47 @@ void gnome::run() {
         break;
       }
       case RAMPAGE: {
-        debug( "Wildly murdered %d hamsters and completed my contract (CONTRACT_ID: %d)."
-               "Sending confirmation to landlord.",
-            contracts[my_contract_id].num_hamsters, my_contract_id)
-
+        // Sleep time proportional to number of hamsters to kill. *fairness noises*
+        usleep(contracts[my_contract_id].num_hamsters * 1e5);
+        debug("Wildly murdered %d hamsters and completed my contract (CONTRACT_ID: %d).",
+              contracts[my_contract_id].num_hamsters, my_contract_id)
         debug("Broadcasting CONTRACT_COMPLETE")
+        broadcast_cc();
 
-        struct contract_completed cc_msg{my_contract_id};
-        for (int dst_rank = 0; dst_rank < size; ++dst_rank) {
-          if (dst_rank == rank)
-            continue;
-          comm_world.send(cc_msg, dst_rank, CONTRACT_COMPLETED);
-        }
         state = FINISH;
         break;
       }
       default: {
         // Should never reach here
         debug("Entered superposition state. Committing suicide.")
-
         return;
       }
-    }
-  }
+    } // switch(state)
+  } // while(state != FINISH)
   debug("No work left for brave warrior. Committing suicide.")
+}
+void gnome::broadcast_cc() const {
+  struct contract_completed cc_msg{my_contract_id};
+  for (int dst_rank = 0; dst_rank < size; ++dst_rank) {
+    if (dst_rank == rank)
+      continue;
+    comm_world.send(cc_msg, dst_rank, CONTRACT_COMPLETED);
+  }
+}
+std::vector<armory_allocation_item>::iterator gnome::aa_queue_find_position() {
+  std::sort(armory_queue.begin(), armory_queue.end());
+  debug("Armory queue:")
+  for (const auto &item: armory_queue)
+    debug("[ CLOCK: %2d; RANK: %2d; COMPLETED: %s; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
+          item.rfa.lamport_clock,
+          item.rank,
+          (is_completed[item.rfa.contract_id]) ? "true" : "false",
+          item.rfa.contract_id,
+          contracts[item.rfa.contract_id].num_hamsters)
+  auto my_pos = std::find_if(armory_queue.begin(),
+                             armory_queue.end(),
+                             [=](const auto &item) { return item.rank == rank; });
+  return my_pos;
 }
 
 int gnome::get_contracts_from_landlord() {
@@ -214,7 +218,7 @@ int gnome::get_contractid() {
                                                  [=](const contract_queue_item &item) {
                                                    return item.rank == rank;
                                                  });
-  if(position_in_queue_it > last_contract_it)
+  if (position_in_queue_it > last_contract_it)
     return CONTRACTID_UNDEFINED;
   else
     return std::distance(contract_queue.begin(), position_in_queue_it);
@@ -241,9 +245,7 @@ void gnome::broadcast_aa() {
   debug("Broadcasting ALLOCATE_ARMOR to other gnomes")
   for (int dst_rank = 1; dst_rank <= gnomes_num; ++dst_rank) {
     if (dst_rank == rank) continue;
-
 //    debug("Sending ALLOCATE_ARMOR to GNOME %d", dst_rank)
-
     const struct allocate_armor aa_msg{};
     comm_world.send(aa_msg, dst_rank, ALLOCATE_ARMOR);
   }
@@ -253,6 +255,5 @@ void gnome::receive_rfa(int source) {
   struct request_for_armor rfa{};
   comm_world.recv(rfa, source, REQUEST_FOR_ARMOR);
   debug("Received REQUEST_FOR_ARMOR from GNOME %d", source)
-
   armory_queue.emplace_back(source, rfa);
 }

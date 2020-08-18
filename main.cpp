@@ -1,6 +1,6 @@
 #include <mpl/mpl.hpp>
 
-#include "landlord_routine.h"
+#include "landlord.h"
 #include "gnome.h"
 #include "common.h"
 #include "ascii_art.h"
@@ -21,18 +21,15 @@ int main(int argc, char **argv) {
   rank = comm_world.rank();
   lamport_clock = 0;
 
-  if(rank==LANDLORD_RANK)
-    std::puts(header);
-  else
-    usleep(1000);
-
   signal(SIGINT, signal_callback_handler);
   signal(SIGTERM, signal_callback_handler);
 
-
   if (comm_world.rank() == LANDLORD_RANK) { //if landlord
-    landlord_routine(comm_world);
-  } else { //if gnome
+    std::puts(header);
+    landlord landlord(mpl::environment::comm_world());
+    landlord.run();
+  } else {
+    usleep(1000);
     gnome gnome(mpl::environment::comm_world());
     gnome.run();
   }

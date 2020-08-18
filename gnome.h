@@ -11,13 +11,13 @@
 class gnome {
  public:
   explicit gnome(const mpl::communicator& comm_world) :
-                                         comm_world(comm_world),
-                                         rank(comm_world.rank()),
-                                         size(comm_world.size()),
-                                         gnomes_num(size - 1),
-                                         contract_queue(gnomes_num),
-                                         completed_contracts(gnomes_num),
-                                         ranks_in_rampage(gnomes_num)
+      comm_world(comm_world),
+      rank(comm_world.rank()),
+      size(comm_world.size()),
+      gnomes_num(size - 1),
+      contract_queue(gnomes_num),
+      is_completed(gnomes_num),
+      ranks_in_rampage(gnomes_num)
   {
     armory_queue.reserve(gnomes_num);
   }
@@ -44,7 +44,7 @@ class gnome {
   std::vector<struct contract> contracts;
   std::vector<struct contract_queue_item> contract_queue;
   std::vector<struct armory_allocation_item> armory_queue;
-  std::vector<bool> completed_contracts;
+  std::vector<bool> is_completed;
   std::vector<bool> ranks_in_rampage;
 //  std::priority_queue<struct armory_allocation_item> aa_queue;
 
@@ -55,6 +55,8 @@ class gnome {
   void receive_rfa(int source);
   void receive_all_rfc();
   int get_contracts_from_landlord();
+  void broadcast_cc() const;
+  std::vector<armory_allocation_item>::iterator aa_queue_find_position();
 };
 
 #endif //GNOME_ROUTINE_H_
