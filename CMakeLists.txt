@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.16)
-project(MPI_hamster_killers)
+cmake_minimum_required(VERSION 3.10)
+project(MPI_hamster_killers VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(MPI_hamster_killers main.cpp)
+add_executable(MPI_hamster_killers main.cpp gnome.cpp landlord.cpp mpi_types.cpp common.cpp)
+include_directories(./include)
 find_package(MPI REQUIRED)
 
 # For supporting CMake < 3.9:

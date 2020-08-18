@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="Unixlab (8d17d91c-ff07-4e6e-9a18-48b48b95ca33)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/tmp.7s1wzaRwTM" local="$PROJECT_DIR$" />
+            <mapping deploy="/usr/lib64/mpi/gcc/openmpi/bin/mpirun " local="/usr/local/bin/mpirun" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-remote" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
