@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdarg>
 
-void showMessage(int rank, int lamport_clock, const char* msg, ...) {
+void show_message(const int rank, const int lamport_clock, const char* msg, ...) {
   char buf[128];
   std::va_list args;
   va_start (args, msg);

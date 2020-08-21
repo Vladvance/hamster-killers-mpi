@@ -1,7 +1,3 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
 #include <random>
 #include <mpl/mpl.hpp>
 

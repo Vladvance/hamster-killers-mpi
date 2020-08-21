@@ -1,2 +1,5 @@
 /cmake-build-debug/
 /cmake-build-debug-remote/
+/.vs
+/out/build
+*.json

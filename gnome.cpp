@@ -12,6 +12,8 @@
 #include "mpi_types.h"
 #include "gnome.h"
 
+#include <numeric>
+
 void gnome::run() {
 
   debug("I'm alive!")
@@ -40,7 +42,7 @@ void gnome::run() {
         receive_all_rfc();
 
         // Determine my contract id
-        my_contract_id = get_contractid();
+        my_contract_id = get_contract_id();
 
         debug("Contract queue:")
         for (const auto &c : contract_queue)
@@ -118,6 +120,9 @@ void gnome::run() {
             poison_kits_needed -= contracts[cc_msg.contract_id].num_hamsters;
             break;
           }
+        default: 
+			debug("Entered superposition state. Committing suicide.")
+			return;
         }
         break;
       }
@@ -211,7 +216,7 @@ void gnome::receive_all_rfc() {
   }
 }
 
-int gnome::get_contractid() {
+int gnome::get_contract_id() {
   const auto last_contract_it = std::next(contract_queue.begin(), contracts_num);
   std::partial_sort(contract_queue.begin(), last_contract_it, contract_queue.end());
   const auto position_in_queue_it = std::find_if(contract_queue.begin(), contract_queue.end(),
@@ -240,7 +245,8 @@ void gnome::broadcast_rfa() {
   }
 }
 
-void gnome::broadcast_aa() {
+void gnome::broadcast_aa() const
+{
   debug("There are enough stuff available.")
   debug("Broadcasting ALLOCATE_ARMOR to other gnomes")
   for (int dst_rank = 1; dst_rank <= gnomes_num; ++dst_rank) {

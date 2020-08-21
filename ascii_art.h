@@ -1,9 +1,5 @@
-//
-// Created by vladvance on 16.08.2020.
-//
-
-#ifndef MPI_HAMSTER_KILLERS__ASCII_ART_H_
-#define MPI_HAMSTER_KILLERS__ASCII_ART_H_
+#ifndef MPI_HAMSTER_KILLERS__ASCII_ART_H
+#define MPI_HAMSTER_KILLERS_ASCII_ART_H
 
 static const char header[] = R"(
    __________  _____             ______                              ____                  __  _             __  _                _____                 _
@@ -14,4 +10,4 @@ static const char header[] = R"(
 )";
 
 
-#endif //MPI_HAMSTER_KILLERS__ASCII_ART_H_
+#endif //MPI_HAMSTER_KILLERS__ASCII_ART_H

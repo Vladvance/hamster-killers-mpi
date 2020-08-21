@@ -1,9 +1,5 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
-#ifndef GNOME_ROUTINE_H_
-#define GNOME_ROUTINE_H_
+#ifndef GNOME_ROUTINE_H
+#define GNOME_ROUTINE_H
 
 #include <mpl/mpl.hpp>
 #include "mpi_types.h"
@@ -48,10 +44,10 @@ class gnome {
   std::vector<bool> ranks_in_rampage;
 //  std::priority_queue<struct armory_allocation_item> aa_queue;
 
-  int get_contractid();
+  int get_contract_id();
   void broadcast_rfc();
   void broadcast_rfa();
-  void broadcast_aa();
+  void broadcast_aa() const;
   void receive_rfa(int source);
   void receive_all_rfc();
   int get_contracts_from_landlord();
@@ -59,4 +55,4 @@ class gnome {
   std::vector<armory_allocation_item>::iterator aa_queue_find_position();
 };
 
-#endif //GNOME_ROUTINE_H_
+#endif //GNOME_ROUTINE_H

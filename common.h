@@ -1,9 +1,5 @@
-//
-// Created by vladvance on 25.05.2020.
-//
-
-#ifndef MPI_HAMSTER_KILLERS_COMMON_H_
-#define MPI_HAMSTER_KILLERS_COMMON_H_
+#ifndef MPI_HAMSTER_KILLERS_COMMON_H
+#define MPI_HAMSTER_KILLERS_COMMON_H
 
 typedef enum { HIRE, READ_GANDHI } landlord_state_t;
 typedef enum { PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH } elf_state_t;
@@ -47,4 +43,4 @@ enum msg_type_t { CONTRACTS, REQUEST_FOR_CONTRACT, REQUEST_FOR_ARMOR, ALLOCATE_A
 /* printf ale z kolorkami i automatycznym wyświetlaniem RANK. Patrz debug wyżej po szczegóły, jak działa ustawianie kolorków */
 #define println(FORMAT, ...) printf("%c[%d;%dm [%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
 
-#endif //MPI_HAMSTER_KILLERS_COMMON_H_
+#endif //MPI_HAMSTER_KILLERS_COMMON_H

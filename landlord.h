@@ -1,9 +1,5 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
-#ifndef LANDLORD_ROUTINE_H_
-#define LANDLORD_ROUTINE_H_
+#ifndef LANDLORD_ROUTINE_H
+#define LANDLORD_ROUTINE_H
 
 #include <mpl/mpl.hpp>
 #include <random>
@@ -37,4 +33,4 @@ class landlord {
   void receive_all_cc();
 };
 
-#endif // LANDLORD_ROUTINE_H_
+#endif // LANDLORD_ROUTINE_H

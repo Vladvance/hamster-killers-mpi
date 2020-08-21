@@ -1,9 +1,5 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
-#ifndef MPI_TYPES_H_
-#define MPI_TYPES_H_
+#ifndef MPI_TYPES_H
+#define MPI_TYPES_H
 
 #include <mpl/mpl.hpp>
 
@@ -193,4 +189,4 @@ class struct_builder<swap_proc> : public base_struct_builder<swap_proc> {
 };
 }
 
-#endif //MPI_TYPES_H_
+#endif //MPI_TYPES_H
