@@ -35,7 +35,7 @@ void landlord::run() {
           debug("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i, contracts[i].num_hamsters)
         }
         debug("Total num of contracts in this wave: %d", contracts_num)
-        debug("There are %d swords and %d poison kits available.", NUM_OF_SWORDS, NUM_OF_POISON_KITS)
+        debug("There are %d swords and %d poison kits available.", num_of_swords, num_of_poison_kits)
 
         // Send contracts to gnomes
         debug("Broadcasting contract list.")

@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   signal(SIGINT, signal_callback_handler);
   signal(SIGTERM, signal_callback_handler);
 
-  if (comm_world.rank() == LANDLORD_RANK) { //if landlord
+  if (comm_world.rank() == landlord_rank) { //if landlord
     std::puts(header);
     landlord landlord(mpl::environment::comm_world());
     landlord.run();

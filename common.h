@@ -9,19 +9,10 @@ typedef enum { HIRE, READ_GANDHI } landlord_state_t;
 typedef enum { PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH } elf_state_t;
 enum msg_type_t { CONTRACTS, REQUEST_FOR_CONTRACT, REQUEST_FOR_ARMOR, ALLOCATE_ARMOR, CONTRACT_COMPLETED, DELEGATE_PRIORITY, SWAP };
 
-//#define CONTRACTS 1
-//#define REQUEST_FOR_CONTRACT 2
-//#define REQUEST_FOR_ARMOR 3
-//#define ALLOCATE_ARMOR 4
-//#define CONTRACT_COMPLETED 5
-//#define DELEGATE_PRIORITY 6
-//#define SWAP 7
-
-#define LANDLORD_RANK 0
-#define MAX_HAMSTERS_PER_CONTRACT 20
-#define NUM_OF_POISON_KITS 30
-#define NUM_OF_SWORDS 10
-#define CONTRACTID_UNDEFINED -1
+static constexpr int landlord_rank = 0;
+static constexpr int contractid_undefined = -1;
+static constexpr int num_of_swords = 10;
+static constexpr int num_of_poison_kits = 30;
 
 #define DEBUG
 

@@ -47,7 +47,7 @@ void gnome::run() {
           debug("[ RANK: %d; LAMPORT_CLOCK: %d; BLOOD_HUNGER: %d]", c.rank, c.rfc.lamport_clock, c.rfc.blood_hunger)
 
         // If we didn't get a contract, increase blood_hunger and change state to PEACE_IS_A_LIE
-        if (my_contract_id == CONTRACTID_UNDEFINED) {
+        if (my_contract_id == contractid_undefined) {
           debug("No work for me. Gonna rest a bit.")
           blood_hunger++;
 //          state = PEACE_IS_A_LIE;
@@ -167,7 +167,7 @@ std::vector<armory_allocation_item>::iterator gnome::aa_queue_find_position() {
 
 int gnome::get_contracts_from_landlord() {
   debug("Looking forward for new contracts")
-  auto status = comm_world.probe(LANDLORD_RANK, CONTRACTS);
+  auto status = comm_world.probe(landlord_rank, CONTRACTS);
   contracts_num = status.get_count<contract>();
 
   if (contracts_num != mpl::undefined) {
@@ -178,7 +178,7 @@ int gnome::get_contracts_from_landlord() {
   }
 
   // Receive contracts from landlord
-  comm_world.recv(contracts.begin(), contracts.end(), LANDLORD_RANK, CONTRACTS);
+  comm_world.recv(contracts.begin(), contracts.end(), landlord_rank, CONTRACTS);
   debug("Received contract list.")
   return contracts_num;
 }
@@ -219,7 +219,7 @@ int gnome::get_contractid() {
                                                    return item.rank == rank;
                                                  });
   if (position_in_queue_it > last_contract_it)
-    return CONTRACTID_UNDEFINED;
+    return contractid_undefined;
   else
     return std::distance(contract_queue.begin(), position_in_queue_it);
 }
