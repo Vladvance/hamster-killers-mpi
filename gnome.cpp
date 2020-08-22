@@ -18,6 +18,8 @@ void gnome::run() {
 
   // Set initial state
   int state = PEACE_IS_A_LIE;
+  bool initiating_swap = false;
+  int rank_to_delegate = -1;
 
   while (state != FINISH) {
     switch (state) {
@@ -66,13 +68,50 @@ void gnome::run() {
       }
       case TAKING_INVENTORY: {
 
-        if (armory_queue.size() == contracts_num &&
-            swords_needed < S && poison_kits_needed < P) {
-          // Send ALLOCATE_ARMOR to other gnomes
-          broadcast_aa();
-          debug("I'm ready TO KILL!!!")
-          state = RAMPAGE;
-          break;
+        // If armory_queue is complete (gnome received REQUEST_FROM_ARMOR from all gnomes)
+        if (armory_queue.size() == contracts_num) {
+          if (swords_needed < S && poison_kits_needed < P) {
+            // Send ALLOCATE_ARMOR to other gnomes
+            broadcast_aa();
+            debug("I'm ready TO KILL!!!")
+            state = RAMPAGE;
+            break;
+          }
+          if (initiating_swap) {
+            struct delegate_priority dp_msg;
+            comm_world.send(dp_msg, rank_to_delegate, DELEGATE_PRIORITY);
+
+            const auto &status = comm_world.probe(mpl::any_source, mpl::tag::any());
+
+            switch (static_cast<int>(status.tag())) {
+              case SWAP:
+              case ALLOCATE_ARMOR: {
+                // If gnome probed SWAP or ALLOCATE_ARMOR from gnome he is delegating to, move from initializing to swapping phase
+                /*FIXME: Teoretycznie w nastepnej iteracji skrzat powinien za'probe'bować to samo powiadomienie
+                 * w innym switchu i tam go obsłużyć
+                 */
+                if (status.tag() == ALLOCATE_ARMOR) {
+                  struct allocate_armor dummy;
+                  comm_world.recv(dummy, status.source(), ALLOCATE_ARMOR);
+                }
+
+                if (status.source() == rank_to_delegate)
+                  initiating_swap = false;
+              }
+                break;
+              case DELEGATE_PRIORITY: {
+                struct delegate_priority dummy;
+                comm_world.recv(dummy, status.source(), DELEGATE_PRIORITY);
+              }
+                break;
+              default: {
+                // Should never reach here
+//                debug("Entered superposition state. Committing suicide.")
+//                return;
+              }
+            }
+
+          }
         }
 
         const auto &status = comm_world.probe(mpl::any_source, mpl::tag::any());
@@ -82,18 +121,51 @@ void gnome::run() {
             receive_rfa(status.source());
             // If armory_queue is complete, calculate swords_needed and poison_kits_needed.
             if (armory_queue.size() == contracts_num) {
-              const auto my_pos = aa_queue_find_position();
-              swords_needed = std::distance(armory_queue.begin(), my_pos);
+              std::sort(armory_queue.begin(), armory_queue.end());
+              for (auto swap_msg: swap_queue) {
+                auto swap1 = aa_queue_find_position(swap_msg.rank_who_delegates);
+                auto swap2 = aa_queue_find_position(swap_msg.rank_to_whom_delegated);
+                std::swap(swap1, swap2);
+              }
+              debug("Armory queue:")
+              for (const auto &item: armory_queue)
+                debug("[ CLOCK: %2d; RANK: %2d; COMPLETED: %s; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
+                      item.rfa.lamport_clock,
+                      item.rank,
+                      (is_completed[item.rfa.contract_id]) ? "true" : "false",
+                      item.rfa.contract_id,
+                      contracts[item.rfa.contract_id].num_hamsters)
+              my_aaq_pos = aa_queue_find_position(rank);
+              swords_needed = std::distance(armory_queue.begin(), my_aaq_pos);
               poison_kits_needed = std::accumulate(armory_queue.begin(),
-                                                   my_pos, 0, [&](int sum, const auto &item) {
+                                                   my_aaq_pos, 0, [&](int sum, const auto &item) {
                     return (is_completed[item.rfa.contract_id]) ? sum : sum
                         + contracts[item.rfa.contract_id].num_hamsters;
                   });
-              const int my_pos_idx = std::distance(armory_queue.begin(), my_pos);
+              const int my_pos_idx = std::distance(armory_queue.begin(), my_aaq_pos);
               debug("My position in armory_queue = %d, swords_needed = %d, poison_kits_needed = %d",
                     my_pos_idx,
                     swords_needed,
                     poison_kits_needed)
+
+              if (poison_kits_needed > P &&
+                  my_aaq_pos != std::prev(armory_queue.end())) {
+                debug("Checking if I can swap with somebody")
+
+                for (auto it = std::next(my_aaq_pos); it != armory_queue.end(); ++it) {
+                  if (contracts[it->rfa.contract_id].num_hamsters < contracts[my_contract_id].num_hamsters) {
+                    debug("Initiating swap with %d, he has %d hamsters to kill, and I have %d",
+                          it->rank,
+                          contracts[it->rfa.contract_id].num_hamsters,
+                          contracts[my_contract_id].num_hamsters)
+                    initiating_swap = true;
+                    rank_to_delegate = it->rank;
+                    struct delegate_priority dp_msg;
+                    comm_world.send(dp_msg, it->rank, DELEGATE_PRIORITY);
+                    break;
+                  }
+                }
+              }
             }
             break;
           }
@@ -116,11 +188,29 @@ void gnome::run() {
             }
             swords_needed--;
             poison_kits_needed -= contracts[cc_msg.contract_id].num_hamsters;
-            break;
           }
+            break;
+          case DELEGATE_PRIORITY: {
+            // Send SWAP to all gnomes between me and delegating gnome
+            struct delegate_priority dummy;
+            comm_world.recv(dummy, status.source(), DELEGATE_PRIORITY);
+            const auto delegating_pos = aa_queue_find_position(status.source());
+            for (auto it = delegating_pos; it != my_aaq_pos; ++it) {
+              const struct swap_proc swap_msg{status.source(), rank};
+              comm_world.send(swap_msg, it->rank, SWAP);
+            }
+            state = RAMPAGE;
+          }
+            break;
+          case SWAP: {
+            struct swap_proc swap_msg;
+            comm_world.recv(swap_msg, status.source(), SWAP);
+
+          }
+            break;
         }
-        break;
       }
+        break;
       case RAMPAGE: {
         // Sleep time proportional to number of hamsters to kill. *fairness noises*
         usleep(contracts[my_contract_id].num_hamsters * 1e5);
@@ -149,20 +239,10 @@ void gnome::broadcast_cc() const {
     comm_world.send(cc_msg, dst_rank, CONTRACT_COMPLETED);
   }
 }
-std::vector<armory_allocation_item>::iterator gnome::aa_queue_find_position() {
-  std::sort(armory_queue.begin(), armory_queue.end());
-  debug("Armory queue:")
-  for (const auto &item: armory_queue)
-    debug("[ CLOCK: %2d; RANK: %2d; COMPLETED: %s; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
-          item.rfa.lamport_clock,
-          item.rank,
-          (is_completed[item.rfa.contract_id]) ? "true" : "false",
-          item.rfa.contract_id,
-          contracts[item.rfa.contract_id].num_hamsters)
-  auto my_pos = std::find_if(armory_queue.begin(),
-                             armory_queue.end(),
-                             [=](const auto &item) { return item.rank == rank; });
-  return my_pos;
+std::vector<struct armory_allocation_item>::iterator gnome::aa_queue_find_position(const int rank_) {
+  return std::find_if(armory_queue.begin(),
+                      armory_queue.end(),
+                      [=](const auto &item) { return item.rank == rank_; });
 }
 
 int gnome::get_contracts_from_landlord() {
@@ -256,4 +336,33 @@ void gnome::receive_rfa(int source) {
   comm_world.recv(rfa, source, REQUEST_FOR_ARMOR);
   debug("Received REQUEST_FOR_ARMOR from GNOME %d", source)
   armory_queue.emplace_back(source, rfa);
+}
+
+void gnome::handle_swap(const struct swap_proc swap_msg) {
+  if (armory_queue.size() != contracts_num) {
+    swap_queue.push_back(swap_msg);
+    return;
+  }
+  std::vector<struct armory_allocation_item>::iterator swap1_pos;
+  if (swap_msg.rank_who_delegates == rank)
+    swap1_pos = my_aaq_pos;
+  else
+    swap1_pos = std::find_if(armory_queue.begin(),
+                             armory_queue.end(),
+                             [=](const auto &item) { return item.rank == swap_msg.rank_who_delegates; });
+  auto swap2_pos = std::find_if(swap1_pos,
+                                armory_queue.end(),
+                                [=](const auto &item) { return item.rank == swap_msg.rank_to_whom_delegated; });
+  if (swap1_pos == my_aaq_pos) {
+    for (auto it = std::next(my_aaq_pos); it <= swap2_pos; ++it) {
+      poison_kits_needed += contracts[it->rfa.contract_id].num_hamsters;
+    }
+  }
+  //TODO: warunek będze zawsze spełniony, jeśli SWAP wysyłany tylko do procesów pomiędzy nami
+  if (swap1_pos < my_aaq_pos && my_aaq_pos < swap2_pos) {
+    poison_kits_needed -= contracts[swap1_pos->rfa.contract_id].num_hamsters
+        - contracts[swap2_pos->rfa.contract_id].num_hamsters;
+  }
+  //TODO: TBH nie ma sensu bawić siœ z samą kolejką skoro wszystko sależy od poison_kts_needed
+  std::swap(swap1_pos, swap2_pos);
 }

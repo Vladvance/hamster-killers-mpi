@@ -34,18 +34,20 @@ class gnome {
   const int rank;
   const int size;
   const int gnomes_num;
-  int lamport_clock {0};
-  int contracts_num {0};
-  int swords_needed {0};
-  int poison_kits_needed {0};
-  int blood_hunger {0};
-  int my_contract_id {0};
+  int lamport_clock {};
+  int contracts_num {};
+  int swords_needed {};
+  int poison_kits_needed {};
+  int blood_hunger {};
+  int my_contract_id {};
 
   std::vector<struct contract> contracts;
   std::vector<struct contract_queue_item> contract_queue;
   std::vector<struct armory_allocation_item> armory_queue;
   std::vector<bool> is_completed;
   std::vector<bool> ranks_in_rampage;
+  std::vector<struct swap_proc> swap_queue;
+  std::vector<struct armory_allocation_item>::iterator my_aaq_pos;
 //  std::priority_queue<struct armory_allocation_item> aa_queue;
 
   int get_contractid();
@@ -56,7 +58,8 @@ class gnome {
   void receive_all_rfc();
   int get_contracts_from_landlord();
   void broadcast_cc() const;
-  std::vector<armory_allocation_item>::iterator aa_queue_find_position();
+  void handle_swap(struct swap_proc swap_msg);
+  std::vector<struct armory_allocation_item>::iterator aa_queue_find_position(int rank);
 };
 
 #endif //GNOME_ROUTINE_H_
