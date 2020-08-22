@@ -224,6 +224,7 @@ void gnome::run() {
         debug("Broadcasting CONTRACT_COMPLETE")
         broadcast_cc();
 
+        blood_hunger = 0;
         state = FINISH;
         break;
       }
