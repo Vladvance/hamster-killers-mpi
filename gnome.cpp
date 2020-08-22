@@ -27,6 +27,7 @@ void gnome::run() {
         lamport_clock = 0;
         std::fill(is_completed.begin(), is_completed.end(), false);
         std::fill(ranks_in_rampage.begin(), ranks_in_rampage.end(), false);
+        swap_queue.clear();
 
         contracts_num = get_contracts_from_landlord();
 
@@ -87,19 +88,21 @@ void gnome::run() {
               case SWAP:
               case ALLOCATE_ARMOR: {
                 // If gnome probed SWAP or ALLOCATE_ARMOR from gnome he is delegating to, move from initializing to swapping phase
-                /*FIXME: Teoretycznie w nastepnej iteracji skrzat powinien za'probe'bować to samo powiadomienie
-                 * w innym switchu i tam go obsłużyć
-                 */
                 if (status.tag() == ALLOCATE_ARMOR) {
+                  // Dummy receive
                   struct allocate_armor dummy;
                   comm_world.recv(dummy, status.source(), ALLOCATE_ARMOR);
                 }
 
+                /*FIXME: Teoretycznie w nastepnej iteracji skrzat powinien za'probe'bować ten sam SWAP
+                 * w innym switchu i tam go obsłużyć
+                 */
                 if (status.source() == rank_to_delegate)
                   initiating_swap = false;
               }
                 break;
               case DELEGATE_PRIORITY: {
+                // Dummy receive
                 struct delegate_priority dummy;
                 comm_world.recv(dummy, status.source(), DELEGATE_PRIORITY);
               }
@@ -127,6 +130,7 @@ void gnome::run() {
                 auto swap2 = aa_queue_find_position(swap_msg.rank_to_whom_delegated);
                 std::swap(swap1, swap2);
               }
+              // Print armory_queue
               debug("Armory queue:")
               for (const auto &item: armory_queue)
                 debug("[ CLOCK: %2d; RANK: %2d; COMPLETED: %s; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
@@ -135,19 +139,26 @@ void gnome::run() {
                       (is_completed[item.rfa.contract_id]) ? "true" : "false",
                       item.rfa.contract_id,
                       contracts[item.rfa.contract_id].num_hamsters)
+
+              // Get my position in armory_queue
               my_aaq_pos = aa_queue_find_position(rank);
+
+              // Calculate variables
               swords_needed = std::distance(armory_queue.begin(), my_aaq_pos);
               poison_kits_needed = std::accumulate(armory_queue.begin(),
                                                    my_aaq_pos, 0, [&](int sum, const auto &item) {
                     return (is_completed[item.rfa.contract_id]) ? sum : sum
                         + contracts[item.rfa.contract_id].num_hamsters;
                   });
+
+
               const int my_pos_idx = std::distance(armory_queue.begin(), my_aaq_pos);
               debug("My position in armory_queue = %d, swords_needed = %d, poison_kits_needed = %d",
                     my_pos_idx,
                     swords_needed,
                     poison_kits_needed)
 
+              // Check if can swap with somebody
               if (poison_kits_needed > P &&
                   my_aaq_pos != std::prev(armory_queue.end())) {
                 debug("Checking if I can swap with somebody")
@@ -205,7 +216,7 @@ void gnome::run() {
           case SWAP: {
             struct swap_proc swap_msg;
             comm_world.recv(swap_msg, status.source(), SWAP);
-
+            handle_swap(swap_msg);
           }
             break;
         }
@@ -231,6 +242,7 @@ void gnome::run() {
   } // while(state != FINISH)
   debug("No work left for brave warrior. Committing suicide.")
 }
+
 void gnome::broadcast_cc() const {
   struct contract_completed cc_msg{my_contract_id};
   for (int dst_rank = 0; dst_rank < size; ++dst_rank) {
@@ -239,6 +251,7 @@ void gnome::broadcast_cc() const {
     comm_world.send(cc_msg, dst_rank, CONTRACT_COMPLETED);
   }
 }
+
 std::vector<struct armory_allocation_item>::iterator gnome::aa_queue_find_position(const int rank_) {
   return std::find_if(armory_queue.begin(),
                       armory_queue.end(),
