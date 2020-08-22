@@ -163,18 +163,12 @@ void gnome::run() {
                   my_aaq_pos != std::prev(armory_queue.end())) {
                 debug("Checking if I can swap with somebody")
 
-                for (auto it = std::next(my_aaq_pos); it != armory_queue.end(); ++it) {
-                  if (contracts[it->rfa.contract_id].num_hamsters < contracts[my_contract_id].num_hamsters) {
-                    debug("Initiating swap with %d, he has %d hamsters to kill, and I have %d",
-                          it->rank,
-                          contracts[it->rfa.contract_id].num_hamsters,
-                          contracts[my_contract_id].num_hamsters)
-                    initiating_swap = true;
-                    rank_to_delegate = it->rank;
-                    struct delegate_priority dp_msg;
-                    comm_world.send(dp_msg, it->rank, DELEGATE_PRIORITY);
-                    break;
-                  }
+                rank_to_delegate = get_rank_to_delegate();
+                if(rank_to_delegate != -1) {
+                  initiating_swap = true;
+                  struct delegate_priority dp_msg;
+                  comm_world.send(dp_msg, rank_to_delegate, DELEGATE_PRIORITY);
+                  break;
                 }
               }
             }
@@ -349,6 +343,24 @@ void gnome::receive_rfa(int source) {
   comm_world.recv(rfa, source, REQUEST_FOR_ARMOR);
   debug("Received REQUEST_FOR_ARMOR from GNOME %d", source)
   armory_queue.emplace_back(source, rfa);
+}
+
+int gnome::get_rank_to_delegate() {
+  // If exceeding even without this gnome, nobody can fit
+  if((poison_kits_needed - contracts[my_contract_id].num_hamsters) >= P)
+    return -1;
+  int max_hamsters_fit = P - (poison_kits_needed - contracts[my_contract_id].num_hamsters);
+  auto pos = std::find_if(std::next(my_aaq_pos), armory_queue.end(),
+               [=](const auto& item) {return contracts[item.rfa.contract_id].num_hamsters <= max_hamsters_fit;});
+  if(pos == armory_queue.end())
+    return -1;
+  else {
+    debug("Initiating swap with %d, he has %d hamsters to kill, and I have %d",
+          pos->rank,
+          contracts[pos->rfa.contract_id].num_hamsters,
+          contracts[my_contract_id].num_hamsters)
+    return std::distance(armory_queue.begin(), pos);
+  }
 }
 
 void gnome::handle_swap(const struct swap_proc swap_msg) {

@@ -59,6 +59,7 @@ class gnome {
   int get_contracts_from_landlord();
   void broadcast_cc() const;
   void handle_swap(struct swap_proc swap_msg);
+  int get_rank_to_delegate();
   std::vector<struct armory_allocation_item>::iterator aa_queue_find_position(int rank);
 };
 
