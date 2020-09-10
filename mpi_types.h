@@ -7,190 +7,245 @@
 
 #include <mpl/mpl.hpp>
 
-
-struct contract {
-  int contract_id;
-  int num_hamsters;
+enum MessageType {
+  CONTRACTS,
+  REQUEST_FOR_CONTRACT,
+  REQUEST_FOR_ARMOR,
+  ALLOCATE_ARMOR,
+  CONTRACT_COMPLETED,
+  DELEGATE_PRIORITY,
+  SWAP
 };
 
-struct request_for_contract {
-  int lamport_clock;
-  int blood_hunger;
+struct MessageBase {
+  int timestamp;
+};
 
-  bool operator<(const request_for_contract &rhs) const {
-    return (blood_hunger == rhs.blood_hunger) ?
-           (lamport_clock < rhs.lamport_clock) :
-           (blood_hunger < rhs.blood_hunger);
+struct Contract : public MessageBase {
+  int contractId;
+  int numberOfHamsters;
+
+  Contract() = default;
+  Contract(int contractId, int numberOfHamsters)
+      : contractId(contractId), numberOfHamsters(numberOfHamsters) {}
+};
+
+struct RequestForContract : public MessageBase {
+  int bloodHunger;
+
+  RequestForContract() = default;
+  RequestForContract(int bloodHunger) : bloodHunger(bloodHunger) {}
+
+  bool operator<(const RequestForContract &rhs) const {
+    return (bloodHunger == rhs.bloodHunger) ? (timestamp < rhs.timestamp)
+                                            : (bloodHunger < rhs.bloodHunger);
   }
 
-  bool operator==(const request_for_contract &rhs) const {
-    return(blood_hunger == rhs.blood_hunger && lamport_clock == rhs.lamport_clock);
+  bool operator==(const RequestForContract &rhs) const {
+    return (bloodHunger == rhs.bloodHunger && timestamp == rhs.timestamp);
   }
 };
 
-struct contract_queue_item {
+struct RequestForArmor : public MessageBase {
+  int contractId;
+
+  RequestForArmor() = default;
+  RequestForArmor(int contractId) : contractId(contractId) {}
+
+  bool operator<(const RequestForArmor &rhs) const {
+    return timestamp < rhs.timestamp;
+  }
+
+  bool operator==(const RequestForArmor &rhs) const {
+    return timestamp == rhs.timestamp;
+  }
+};
+
+struct AllocateArmor : public MessageBase {};
+
+struct DelegatePriority : public MessageBase {};
+
+struct ContractCompleted : public MessageBase {
+  int contractId;
+
+  ContractCompleted() = default;
+  ContractCompleted(int contractId) : contractId(contractId) {}
+};
+
+struct Swap : public MessageBase {
+  int delegatingRank;
+  int delegatedRank;
+
+  Swap() = default;
+  Swap(int delegatingRank, int delegatedRank)
+      : delegatingRank(delegatingRank), delegatedRank(delegatedRank) {}
+};
+
+struct ContractQueueItem {
   int rank;
-  struct request_for_contract rfc;
+  RequestForContract request;
 
-  bool operator<(const contract_queue_item &rhs) const {
-    return (rfc == rhs.rfc) ?
-           (rank < rhs.rank) :
-           (rfc < rhs.rfc);
+  bool operator<(const ContractQueueItem &rhs) const {
+    return (request == rhs.request) ? (rank < rhs.rank)
+                                    : (request < rhs.request);
+  }
+
+  bool operator==(const ContractQueueItem &rhs) const {
+    return (rank == rhs.rank && request == rhs.request);
   }
 };
 
-struct request_for_armor {
-  int lamport_clock;
-  int contract_id;
-
-  bool operator<(const request_for_armor &rhs) const {
-    return lamport_clock < rhs.lamport_clock;
-  }
-
-  bool operator==(const request_for_armor &rhs) const {
-    return lamport_clock == rhs.lamport_clock;
-  }
-};
-
-struct armory_allocation_item {
-  armory_allocation_item() = default;
-  armory_allocation_item(const int rank, const request_for_armor& rfa) : rank(rank), rfa(rfa) {}
+struct ArmoryAllocationItem {
   int rank;
-  struct request_for_armor rfa;
+  struct RequestForArmor request;
 
-  bool operator<(const armory_allocation_item &rhs) const {
-    return (rfa == rhs.rfa) ?
-            rank < rhs.rank :
-            rfa < rhs.rfa;
+  ArmoryAllocationItem() = default;
+  ArmoryAllocationItem(const int rank, const RequestForArmor &request)
+      : rank(rank), request(request) {}
+
+  bool operator<(const ArmoryAllocationItem &rhs) const {
+    return (request == rhs.request) ? rank < rhs.rank : request < rhs.request;
   }
-};
 
-struct allocate_armor {};
-
-struct delegate_priority {};
-
-struct contract_completed {
-  int contract_id;
-};
-
-struct swap_proc {
-  int rank_who_delegates;
-  int rank_to_whom_delegated;
+  bool operator==(const ArmoryAllocationItem &rhs) const {
+    return (rank == rhs.rank && request == rhs.request);
+  }
 };
 
 namespace mpl {
 
-template<>
-class struct_builder<contract> : public base_struct_builder<contract> {
-  struct_layout<contract> layout_;
+template <>
+class struct_builder<Contract> : public base_struct_builder<Contract> {
+  struct_layout<Contract> layout_;
+
  public:
   struct_builder() : base_struct_builder() {
-    contract str;
+    Contract str;
     layout_.register_struct(str);
-    layout_.register_element(str.contract_id);
-    layout_.register_element(str.num_hamsters);
+    layout_.register_element(str.timestamp);
+    layout_.register_element(str.contractId);
+    layout_.register_element(str.numberOfHamsters);
     define_struct(layout_);
   }
 };
 
-template<>
-class struct_builder<request_for_contract> : public base_struct_builder<request_for_contract> {
-  struct_layout<request_for_contract> layout_;
+template <>
+class struct_builder<RequestForContract>
+    : public base_struct_builder<RequestForContract> {
+  struct_layout<RequestForContract> layout_;
+
  public:
   struct_builder() : base_struct_builder() {
-    request_for_contract str;
+    RequestForContract str;
     layout_.register_struct(str);
-    layout_.register_element(str.lamport_clock);
-    layout_.register_element(str.blood_hunger);
+    layout_.register_element(str.timestamp);
+    layout_.register_element(str.bloodHunger);
     define_struct(layout_);
   }
 };
 
-template<>
-class struct_builder<contract_queue_item> : public base_struct_builder<contract_queue_item> {
-  struct_layout<contract_queue_item> layout_;
+template <>
+class struct_builder<RequestForArmor>
+    : public base_struct_builder<RequestForArmor> {
+  struct_layout<RequestForArmor> layout_;
+
  public:
   struct_builder() : base_struct_builder() {
-    contract_queue_item str;
+    RequestForArmor str;
+    layout_.register_struct(str);
+    layout_.register_element(str.timestamp);
+    layout_.register_element(str.contractId);
+    define_struct(layout_);
+  }
+};
+
+template <>
+class struct_builder<AllocateArmor>
+    : public base_struct_builder<AllocateArmor> {
+  struct_layout<AllocateArmor> layout_;
+
+ public:
+  struct_builder() : base_struct_builder() {
+    AllocateArmor str{};
+    layout_.register_struct(str);
+    layout_.register_element(str.timestamp);
+    define_struct(layout_);
+  }
+};
+
+template <>
+class struct_builder<DelegatePriority>
+    : public base_struct_builder<DelegatePriority> {
+  struct_layout<DelegatePriority> layout_;
+
+ public:
+  struct_builder() : base_struct_builder() {
+    DelegatePriority str{};
+    layout_.register_struct(str);
+    layout_.register_element(str.timestamp);
+    define_struct(layout_);
+  }
+};
+
+template <>
+class struct_builder<ContractCompleted>
+    : public base_struct_builder<ContractCompleted> {
+  struct_layout<ContractCompleted> layout_;
+
+ public:
+  struct_builder() : base_struct_builder() {
+    ContractCompleted str{};
+    layout_.register_struct(str);
+    layout_.register_element(str.timestamp);
+    layout_.register_element(str.contractId);
+    define_struct(layout_);
+  }
+};
+
+template <>
+class struct_builder<Swap> : public base_struct_builder<Swap> {
+  struct_layout<Swap> layout_;
+
+ public:
+  struct_builder() : base_struct_builder() {
+    Swap str{};
+    layout_.register_struct(str);
+    layout_.register_element(str.timestamp);
+    layout_.register_element(str.delegatingRank);
+    layout_.register_element(str.delegatedRank);
+    define_struct(layout_);
+  }
+};
+
+template <>
+class struct_builder<ContractQueueItem>
+    : public base_struct_builder<ContractQueueItem> {
+  struct_layout<ContractQueueItem> layout_;
+
+ public:
+  struct_builder() : base_struct_builder() {
+    ContractQueueItem str;
     layout_.register_struct(str);
     layout_.register_element(str.rank);
-    layout_.register_element(str.rfc);
+    layout_.register_element(str.request);
     define_struct(layout_);
   }
 };
 
-template<>
-class struct_builder<request_for_armor> : public base_struct_builder<request_for_armor> {
-  struct_layout<request_for_armor> layout_;
- public:
-  struct_builder() : base_struct_builder() {
-    request_for_armor str;
-    layout_.register_struct(str);
-    layout_.register_element(str.lamport_clock);
-    layout_.register_element(str.contract_id);
-    define_struct(layout_);
-  }
-};
+template <>
+class struct_builder<ArmoryAllocationItem>
+    : public base_struct_builder<ArmoryAllocationItem> {
+  struct_layout<ArmoryAllocationItem> layout_;
 
-template<>
-class struct_builder<armory_allocation_item> : public base_struct_builder<armory_allocation_item> {
-  struct_layout<armory_allocation_item> layout_;
  public:
   struct_builder() : base_struct_builder() {
-    armory_allocation_item str{};
+    ArmoryAllocationItem str{};
     layout_.register_struct(str);
     layout_.register_element(str.rank);
-    layout_.register_element(str.rfa);
+    layout_.register_element(str.request);
     define_struct(layout_);
   }
 };
+}  // namespace mpl
 
-template<>
-class struct_builder<allocate_armor> : public base_struct_builder<allocate_armor> {
-  struct_layout<allocate_armor> layout_;
- public:
-  struct_builder() : base_struct_builder() {
-    allocate_armor str{};
-    layout_.register_struct(str);
-    define_struct(layout_);
-  }
-};
-
-template<>
-class struct_builder<delegate_priority> : public base_struct_builder<delegate_priority> {
-  struct_layout<delegate_priority> layout_;
- public:
-  struct_builder() : base_struct_builder() {
-    delegate_priority str{};
-    layout_.register_struct(str);
-    define_struct(layout_);
-  }
-};
-
-template<>
-class struct_builder<contract_completed> : public base_struct_builder<contract_completed> {
-  struct_layout<contract_completed> layout_;
- public:
-  struct_builder() : base_struct_builder() {
-    contract_completed str{};
-    layout_.register_struct(str);
-    layout_.register_element(str.contract_id);
-    define_struct(layout_);
-  }
-};
-
-template<>
-class struct_builder<swap_proc> : public base_struct_builder<swap_proc> {
-  struct_layout<swap_proc> layout_;
- public:
-  struct_builder() : base_struct_builder() {
-    swap_proc str{};
-    layout_.register_struct(str);
-    layout_.register_element(str.rank_who_delegates);
-    layout_.register_element(str.rank_to_whom_delegated);
-    define_struct(layout_);
-  }
-};
-}
-
-#endif //MPI_TYPES_H_
+#endif  // MPI_TYPES_H_

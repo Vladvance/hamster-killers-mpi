@@ -2,75 +2,90 @@
 // Created by vladvance on 05.08.2020.
 //
 
-#include <random>
-#include <mpl/mpl.hpp>
-
-#include "common.h"
-#include "mpi_types.h"
 #include "landlord.h"
 
+#include <random>
 
-void landlord::run() {
+#include "mpi_types.h"
 
-  debug("I'm alive!")
+std::random_device randomDevice;
+int randomInt(int min, int max) {
+  return std::uniform_int_distribution<int>{min, max}(randomDevice);
+}
 
-  int state = HIRE;
+const int Landlord::landlordRank = 0;
 
-  while (state != FINISH) {
+Landlord::Landlord(const mpl::communicator& communicator)
+    : ProcessBase(communicator, "LANDLORD"),
+      numberOfGnomes(communicator.size() - 1) {}
+
+void Landlord::run(int maxRounds) {
+  log("I'm alive!");
+
+  state = HIRE;
+  int round = 0;
+
+  while (round != maxRounds) {
     switch (state) {
       case HIRE: {
-        std::uniform_int_distribution<int> rand_hamster_num(min_hamsters_per_contract, max_hamsters_per_contract);
-        std::uniform_int_distribution<int> rand_contracts_num(1, gnomes_num);
-
-        // Num of contracts equal num of gnomes, FOR TESTING PURPOSE
-        contracts_num = gnomes_num;
-//        contracts_num = rand_contracts_num(gen);
-        contracts.resize(contracts_num);
-        is_completed.resize(contracts_num);
-
-        // Generate random contracts
-        for (int i = 0; i < contracts_num; ++i) {
-          contracts[i].contract_id = i;
-          contracts[i].num_hamsters = rand_hamster_num(gen);
-          debug("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i, contracts[i].num_hamsters)
-        }
-        debug("Total num of contracts in this wave: %d", contracts_num)
-        debug("There are %d swords and %d poison kits available.", num_of_swords, num_of_poison_kits)
-
-        // Send contracts to gnomes
-        debug("Broadcasting contract list.")
-        for (int dst_rank = gnome_first; dst_rank < size; ++dst_rank) {
-//          debug("Sending contract list to GNOME %d.", dst_rank)
-          comm_world.send(contracts.begin(), contracts.end(), dst_rank, CONTRACTS);
-        }
-
-        state = READ_GANDHI;
-//        state = FINISH;
+        doHire();
         break;
       }
       case READ_GANDHI: {
-
-        receive_all_cc();
-        state = FINISH;
+        doReadGandhi();
+        break;
+      }
+      case FINISH: {
+        round++;
+        state = HIRE;
         break;
       }
       default: {
-        //should never reach here
-        debug("Entered superposition state. Committing suicide.")
+        // should never reach here
+        log("Entered superposition state. Committing suicide.");
         return;
       }
     }
   }
-  debug("My mission in this world completed. Committing suicide.")
+  log("My mission in this world completed. Committing suicide.");
 }
-void landlord::receive_all_cc() {
-  struct contract_completed cc_msg{};
-  for (int i = 0; i < contracts_num; ++i) {
-    const auto& status = comm_world.recv(cc_msg, mpl::any_source, CONTRACT_COMPLETED);
-    debug("I was informed that GNOME %d has murdered all %d hamsters and so completed his contract (ID : %d)",
-          status.source(),
-          contracts[cc_msg.contract_id].num_hamsters,
-          cc_msg.contract_id)
-    is_completed[cc_msg.contract_id] = true;
+
+void Landlord::doHire() {
+  contracts.clear();
+  // Number of contracts equal to number of gnomes, FOR TESTING PURPOSE
+  int numberOfContracts = numberOfGnomes;
+  // int numberOfContracts = randomInt(1, numberOfGnomes);
+
+  // Generate random contracts
+  for (int i = 0; i < numberOfContracts; ++i) {
+    int numberOfHamsters =
+        randomInt(minHamstersPerContract, maxHamstersPerContract);
+    contracts.push_back(Contract(i, numberOfHamsters));
+    log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i,
+        numberOfHamsters);
+  }
+  isCompleted.resize(numberOfContracts);
+  std::fill(isCompleted.begin(), isCompleted.end(), false);
+  log("Total num of contracts in this wave: %d", numberOfContracts);
+
+  // Send contracts to gnomes
+  log("Broadcasting contract list.");
+  broadcastVector(contracts, CONTRACTS);
+
+  state = READ_GANDHI;
+}
+
+void Landlord::doReadGandhi() {
+  ContractCompleted message{};
+  const auto& status = receiveAny(message, CONTRACT_COMPLETED);
+  int contractId = message.contractId;
+  isCompleted[contractId] = true;
+  log("I was informed that GNOME %d has murdered all %d hamsters and so "
+      "completed his contract (ID : %d)",
+      status.source(), contracts[contractId].numberOfHamsters, contractId);
+
+  if (std::all_of(isCompleted.begin(), isCompleted.end(),
+                  [](bool completed) { return completed; })) {
+    state = FINISH;
   }
 }

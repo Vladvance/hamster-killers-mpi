@@ -7,7 +7,6 @@
 
 typedef enum { HIRE, READ_GANDHI } landlord_state_t;
 typedef enum { PEACE_IS_A_LIE, GATHER_PARTY, TAKING_INVENTORY, RAMPAGE, FINISH } elf_state_t;
-enum msg_type_t { CONTRACTS, REQUEST_FOR_CONTRACT, REQUEST_FOR_ARMOR, ALLOCATE_ARMOR, CONTRACT_COMPLETED, DELEGATE_PRIORITY, SWAP };
 
 static constexpr int landlord_rank = 0;
 static constexpr int contractid_undefined = -1;
