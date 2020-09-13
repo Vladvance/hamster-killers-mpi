@@ -81,41 +81,11 @@ struct Swap : public MessageBase {
       : delegatingRank(delegatingRank), delegatedRank(delegatedRank) {}
 };
 
-struct ContractQueueItem {
-  int rank;
-  RequestForContract request;
-
-  bool operator<(const ContractQueueItem &rhs) const {
-    return (request == rhs.request) ? (rank < rhs.rank)
-                                    : (request < rhs.request);
-  }
-
-  bool operator==(const ContractQueueItem &rhs) const {
-    return (rank == rhs.rank && request == rhs.request);
-  }
-};
-
-struct ArmoryAllocationItem {
-  int rank;
-  struct RequestForArmor request;
-
-  ArmoryAllocationItem() = default;
-  ArmoryAllocationItem(const int rank, const RequestForArmor &request)
-      : rank(rank), request(request) {}
-
-  bool operator<(const ArmoryAllocationItem &rhs) const {
-    return (request == rhs.request) ? rank < rhs.rank : request < rhs.request;
-  }
-
-  bool operator==(const ArmoryAllocationItem &rhs) const {
-    return (rank == rhs.rank && request == rhs.request);
-  }
-};
-
 namespace mpl {
 
 template <>
-class struct_builder<Contract> : public base_struct_builder<Contract> {
+class struct_builder<Contract>
+    : public base_struct_builder<Contract> {
   struct_layout<Contract> layout_;
 
  public:
@@ -203,7 +173,8 @@ class struct_builder<ContractCompleted>
 };
 
 template <>
-class struct_builder<Swap> : public base_struct_builder<Swap> {
+class struct_builder<Swap>
+    : public base_struct_builder<Swap> {
   struct_layout<Swap> layout_;
 
  public:
@@ -213,36 +184,6 @@ class struct_builder<Swap> : public base_struct_builder<Swap> {
     layout_.register_element(str.timestamp);
     layout_.register_element(str.delegatingRank);
     layout_.register_element(str.delegatedRank);
-    define_struct(layout_);
-  }
-};
-
-template <>
-class struct_builder<ContractQueueItem>
-    : public base_struct_builder<ContractQueueItem> {
-  struct_layout<ContractQueueItem> layout_;
-
- public:
-  struct_builder() : base_struct_builder() {
-    ContractQueueItem str;
-    layout_.register_struct(str);
-    layout_.register_element(str.rank);
-    layout_.register_element(str.request);
-    define_struct(layout_);
-  }
-};
-
-template <>
-class struct_builder<ArmoryAllocationItem>
-    : public base_struct_builder<ArmoryAllocationItem> {
-  struct_layout<ArmoryAllocationItem> layout_;
-
- public:
-  struct_builder() : base_struct_builder() {
-    ArmoryAllocationItem str{};
-    layout_.register_struct(str);
-    layout_.register_element(str.rank);
-    layout_.register_element(str.request);
     define_struct(layout_);
   }
 };

@@ -61,8 +61,7 @@ void Landlord::doHire() {
     int numberOfHamsters =
         randomInt(minHamstersPerContract, maxHamstersPerContract);
     contracts.push_back(Contract(i, numberOfHamsters));
-    log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i,
-        numberOfHamsters);
+    log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i, numberOfHamsters);
   }
   isCompleted.resize(numberOfContracts);
   std::fill(isCompleted.begin(), isCompleted.end(), false);
@@ -80,12 +79,10 @@ void Landlord::doReadGandhi() {
   const auto& status = receiveAny(message, CONTRACT_COMPLETED);
   int contractId = message.contractId;
   isCompleted[contractId] = true;
-  log("I was informed that GNOME %d has murdered all %d hamsters and so "
-      "completed his contract (ID : %d)",
+  log("I was informed that GNOME %d has murdered all %d hamsters and so completed his contract (ID : %d)",
       status.source(), contracts[contractId].numberOfHamsters, contractId);
 
-  if (std::all_of(isCompleted.begin(), isCompleted.end(),
-                  [](bool completed) { return completed; })) {
+  if (std::all_of(isCompleted.begin(), isCompleted.end(), [](bool completed) { return completed; })) {
     state = FINISH;
   }
 }

@@ -10,9 +10,6 @@
 #define DEBUG
 #define MAX_ROUNDS 1
 
-static int rank;
-static int lamport_clock;
-
 void signal_callback_handler(int signum) {
   printf("[Rank: %d] (DEAD): I was wildly killed by unknown force.",
          mpl::environment::comm_world().rank());
@@ -20,8 +17,6 @@ void signal_callback_handler(int signum) {
 
 int main(int argc, char **argv) {
   const mpl::communicator &comm_world(mpl::environment::comm_world());
-  rank = comm_world.rank();
-  lamport_clock = 0;
 
   signal(SIGINT, signal_callback_handler);
   signal(SIGTERM, signal_callback_handler);

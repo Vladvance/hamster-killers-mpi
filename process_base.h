@@ -25,9 +25,7 @@ class ProcessBase {
   template <typename T>
   const bool receiveMultiTagHandle(
       int sourceRank, mpl::tag tag,
-      std::unordered_map<
-          int, std::function<void(const MessageBase*, const mpl::status&)>>
-          messageHandlers) {
+      std::unordered_map<int, std::function<void(const MessageBase*, const mpl::status&)>> messageHandlers) {
     T message{};
     const auto& status = communicator.recv(message, sourceRank, tag);
     if (messageHandlers.find((int)status.tag()) != messageHandlers.end()) {
@@ -113,8 +111,7 @@ class ProcessBase {
   }
 
   template <typename T /* extends MessageBase */>
-  mpl::status receiveVector(std::vector<T>& message, int sourceRank,
-                            mpl::tag tag) {
+  mpl::status receiveVector(std::vector<T>& message, int sourceRank, mpl::tag tag) {
     const mpl::status& probe = communicator.probe(sourceRank, tag);
     int size = probe.get_count<T>();
     if ((size == mpl::undefined) || (size == 0)) exit(EXIT_FAILURE);
@@ -133,9 +130,7 @@ class ProcessBase {
 
   void receiveMultiTag(
       int sourceRank,
-      std::unordered_map<
-          int, std::function<void(const MessageBase*, const mpl::status&)>>
-          messageHandlers);
+      std::unordered_map<int, std::function<void(const MessageBase*, const mpl::status&)>> messageHandlers);
 
  public:
   ProcessBase(const mpl::communicator& communicator, const char* tag = "");

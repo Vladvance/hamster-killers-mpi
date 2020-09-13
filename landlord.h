@@ -1,6 +1,7 @@
 #ifndef LANDLORD_H_
 #define LANDLORD_H_
 
+#include "mpi_types.h"
 #include "process_base.h"
 
 class Landlord : public ProcessBase {
@@ -9,7 +10,7 @@ class Landlord : public ProcessBase {
   const int numberOfGnomes;
 
   LandlordState state;
-  std::vector<struct Contract> contracts;
+  std::vector<Contract> contracts;
   std::vector<bool> isCompleted;
 
   void doHire();
