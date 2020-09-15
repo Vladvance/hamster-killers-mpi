@@ -17,10 +17,6 @@ int ProcessBase::getTimestamp(const MessageBase& message) const {
   return message.timestamp;
 }
 
-int ProcessBase::advanceClock() {
-  return ++lamportClock;
-}
-
 void ProcessBase::setBroadcastScope(std::vector<int> recipientRanks) {
   broadcastScope = recipientRanks;
 }

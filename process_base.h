@@ -41,7 +41,6 @@ class ProcessBase {
  protected:
   const int rank;
 
-  int advanceClock();
   void setBroadcastScope(std::vector<int> recipientRanks);
 
   template <typename... Args>
@@ -66,15 +65,6 @@ class ProcessBase {
       if (recipientRank == rank) continue;
       communicator.send(message, recipientRank, tag);
     }
-  }
-
-  template <typename T /* extends MessageBase */>
-  void sendVector(std::vector<T>& message, int recipientRank, mpl::tag tag) {
-    lamportClock++;
-    for (int i = 0; i < message.size(); i++) {
-      setTimestamp(message[i]);
-    }
-    communicator.send(message.begin(), message.end(), recipientRank, tag);
   }
 
   template <typename T /* extends MessageBase */>
@@ -121,11 +111,6 @@ class ProcessBase {
     int timestamp = getTimestamp(message[0]);
     lamportClock = std::max(lamportClock, timestamp) + 1;
     return status;
-  }
-
-  template <typename T /* extends MessageBase */>
-  mpl::status receiveVectorAny(std::vector<T>& message, mpl::tag tag) {
-    return receiveVector(message, mpl::any_source, tag);
   }
 
   void receiveMultiTag(
