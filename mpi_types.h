@@ -1,7 +1,3 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
 #ifndef MPI_TYPES_H_
 #define MPI_TYPES_H_
 

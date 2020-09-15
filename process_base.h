@@ -11,7 +11,7 @@ struct MessageBase;
 class ProcessBase {
  private:
   int lamportClock = 0;
-  const char* tag;
+  const char* role;
   const mpl::communicator& communicator;
   std::vector<int> broadcastScope;
   std::list<std::pair<const MessageBase*, mpl::status>> messageBuffer;
@@ -20,10 +20,10 @@ class ProcessBase {
   int getTimestamp(const MessageBase& message) const;
   void storeInBuffer(const MessageBase* message, const mpl::status& status);
   const MessageBase* fetchFromBuffer(mpl::status& status, int sourceRank,
-                                     std::vector<mpl::tag> tags);
+                                     const std::vector<mpl::tag>& tags);
 
   template <typename T>
-  const bool receiveMultiTagHandle(
+  bool receiveMultiTagHandle(
       int sourceRank, mpl::tag tag,
       std::unordered_map<int, std::function<void(const MessageBase*, const mpl::status&)>> messageHandlers) {
     T message{};
@@ -46,9 +46,9 @@ class ProcessBase {
 
   template <typename... Args>
   void log(char const* const format, Args const&... args) const {
-    printf("[Rank: %d] [Clock: %d] [%s] ", rank, lamportClock, tag);
+    printf("%c[%d;%dm [Rank: %2d] [Clock: %3d] [%s] ", 27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamportClock, role);
     printf(format, args...);
-    printf("\n");
+    printf("%c[%d;%dm\n", 27,0,37);
   }
 
   template <typename T /* extends MessageBase */>
@@ -133,7 +133,7 @@ class ProcessBase {
       std::unordered_map<int, std::function<void(const MessageBase*, const mpl::status&)>> messageHandlers);
 
  public:
-  ProcessBase(const mpl::communicator& communicator, const char* tag = "");
+  explicit ProcessBase(const mpl::communicator& communicator, const char* tag = "");
   virtual void run(int maxRounds) = 0;
 };
 

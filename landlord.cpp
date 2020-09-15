@@ -1,7 +1,3 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
 #include "landlord.h"
 
 #include <random>
@@ -41,7 +37,7 @@ void Landlord::run(int maxRounds) {
         break;
       }
       default: {
-        // should never reach here
+        // Should never reach here
         log("Entered superposition state. Committing suicide.");
         return;
       }
@@ -60,7 +56,7 @@ void Landlord::doHire() {
   for (int i = 0; i < numberOfContracts; ++i) {
     int numberOfHamsters =
         randomInt(minHamstersPerContract, maxHamstersPerContract);
-    contracts.push_back(Contract(i, numberOfHamsters));
+    contracts.emplace_back(i, numberOfHamsters);
     log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i, numberOfHamsters);
   }
   isCompleted.resize(numberOfContracts);

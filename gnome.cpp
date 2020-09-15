@@ -1,7 +1,3 @@
-//
-// Created by vladvance on 05.08.2020.
-//
-
 #include "gnome.h"
 
 #include <unistd.h>
@@ -48,7 +44,7 @@ void Gnome::run(int maxRounds) {
         break;
       }
       default: {
-        // should never reach here
+        // Should never reach here
         log("Entered superposition state. Committing suicide.");
         return;
       }
@@ -100,7 +96,7 @@ void Gnome::doGatherParty() {
 
   armoryQueue.clear();
   armoryQueue.reserve(contracts.size());
-  armoryQueue.push_back(ArmoryAllocationItem{rank, request});
+  armoryQueue.emplace_back(rank, request);
   positionInArmoryQueue = armoryQueue.begin();
 
   swordsNeeded = numberOfGnomes;
@@ -151,11 +147,11 @@ void Gnome::doTakingInventory() {
            }},
           {DELEGATE_PRIORITY,
            [this](const MessageBase *message, const mpl::status &status) {
-             handleDelegatePriority(message, status);
+             handleDelegatePriority(status);
            }},
           {ALLOCATE_ARMOR,
            [](const MessageBase *message, const mpl::status &status) {
-             // receive and skip
+             // Receive and skip
            }}};
 
   receiveMultiTag(mpl::any_source, messageHandlers);
@@ -175,14 +171,14 @@ void Gnome::doDelegatingPriority() {
            }},
           {DELEGATE_PRIORITY,
            [](const MessageBase *message, const mpl::status &status) {
-             // receive and skip
+             // Receive and skip
            }}};
 
   receiveMultiTag(mpl::any_source, messageHandlers);
 }
 
 void Gnome::doRampage() {
-  // Sleep time proportional to number of hamsters to kill. *fairness noises*
+  // Sleep time proportional to number of hamsters to kill, *fairness noises*
   usleep(contracts[currentContractId].numberOfHamsters * 1e5);
   log("Wildly murdered %d hamsters and completed my contract (CONTRACT_ID: %d).",
       contracts[currentContractId].numberOfHamsters, currentContractId);
@@ -195,7 +191,7 @@ void Gnome::doRampage() {
   state = FINISH;
 }
 
-std::vector<int> Gnome::getAllGnomeRanks() {
+std::vector<int> Gnome::getAllGnomeRanks() const {
   auto ranks = std::vector<int>(numberOfGnomes + 1);
   std::iota(ranks.begin(), ranks.end(), 0);
   ranks.erase(std::find(ranks.begin(), ranks.end(), Landlord::landlordRank));
@@ -203,7 +199,7 @@ std::vector<int> Gnome::getAllGnomeRanks() {
 }
 
 std::vector<int> Gnome::getEmployedGnomeRanks() {
-  auto ranks = std::vector<int>(contracts.size());
+  std::vector<int> ranks(contracts.size());
   for (int i = 0; i < contracts.size(); i++) {
     ranks[i] = contractQueue[i].rank;
   }
@@ -288,14 +284,14 @@ void Gnome::handleRequestForArmor(const MessageBase *message, const mpl::status 
         swordsNeeded, poisonNeeded);
   }
 
-  // If armory_queue is complete, sort it and apply deferred swaps
+  // If armory queue is complete, sort it and apply deferred swaps
   if (armoryQueue.size() == contracts.size()) {
     std::sort(armoryQueue.begin(), armoryQueue.end());
     for (auto swap : swapQueue) {
       applySwap(swap);
     }
     swapQueue.clear();
-    // Print armory_queue
+    // Print armory queue
     log("Armory queue:");
     for (const auto &item : armoryQueue) {
       log("[ CLOCK: %2d; RANK: %2d; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
@@ -330,9 +326,8 @@ void Gnome::handleSwap(const MessageBase *message, const mpl::status &status) {
   applySwap(swap);
 }
 
-void Gnome::handleDelegatePriority(const MessageBase *message, const mpl::status &status) {
+void Gnome::handleDelegatePriority(const mpl::status &status) {
   log("Received DELEGATE_PRIORITY from GNOME %d.", status.source());
-  static_cast<const DelegatePriority *>(message);
   auto swap = Swap(status.source(), rank);
   broadcast(swap, SWAP);
   state = RAMPAGE;
@@ -349,7 +344,6 @@ void Gnome::handleSwapDelegating(const MessageBase *message, const mpl::status &
 
 void Gnome::handleAllocateArmorDelegating(const MessageBase *message, const mpl::status &status) {
   log("Received ALLOCATE_ARMOR from GNOME %d.", status.source());
-  static_cast<const AllocateArmor *>(message);
   if (status.source() == swapRank) {
     state = TAKING_INVENTORY;
   }

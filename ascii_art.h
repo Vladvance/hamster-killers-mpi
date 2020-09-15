@@ -1,7 +1,3 @@
-//
-// Created by vladvance on 16.08.2020.
-//
-
 #ifndef MPI_HAMSTER_KILLERS__ASCII_ART_H_
 #define MPI_HAMSTER_KILLERS__ASCII_ART_H_
 

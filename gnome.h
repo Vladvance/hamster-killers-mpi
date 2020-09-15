@@ -66,7 +66,7 @@ class Gnome : public ProcessBase {
   void doDelegatingPriority();
   void doRampage();
 
-  std::vector<int> getAllGnomeRanks();
+  std::vector<int> getAllGnomeRanks() const;
   std::vector<int> getEmployedGnomeRanks();
   bool getContract();
   int findSwapCandidate();
@@ -75,7 +75,7 @@ class Gnome : public ProcessBase {
   void handleRequestForArmor(const MessageBase* message, const mpl::status& status);
   void handleContractCompleted(const MessageBase* message, const mpl::status& status);
   void handleSwap(const MessageBase* message, const mpl::status& status);
-  void handleDelegatePriority(const MessageBase* message, const mpl::status& status);
+  void handleDelegatePriority(const mpl::status &status);
 
   void handleSwapDelegating(const MessageBase* message, const mpl::status& status);
   void handleAllocateArmorDelegating(const MessageBase* message, const mpl::status& status);
@@ -84,8 +84,8 @@ class Gnome : public ProcessBase {
   static const int swordsTotal = 5;
   static const int poisonTotal = 20;
 
-  Gnome(const mpl::communicator& communicator);
-  virtual void run(int maxRounds) override;
+  explicit Gnome(const mpl::communicator& communicator);
+  void run(int maxRounds) override;
 };
 
 #endif  // GNOME_H_

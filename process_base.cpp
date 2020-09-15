@@ -3,7 +3,7 @@
 #include "mpi_types.h"
 
 ProcessBase::ProcessBase(const mpl::communicator& communicator, const char* tag)
-    : communicator(communicator), rank(communicator.rank()), tag(tag) {
+    : communicator(communicator), rank(communicator.rank()), role(tag) {
   // initialize broadcast scope with all ranks
   broadcastScope.resize(communicator.size());
   std::iota(broadcastScope.begin(), broadcastScope.end(), 0);
@@ -26,10 +26,10 @@ void ProcessBase::setBroadcastScope(std::vector<int> recipientRanks) {
 }
 
 void ProcessBase::storeInBuffer(const MessageBase* message, const mpl::status& status) {
-  messageBuffer.push_back(std::make_pair(message, status));
+  messageBuffer.emplace_back(message, status);
 }
 
-const MessageBase* ProcessBase::fetchFromBuffer(mpl::status& status, int sourceRank, std::vector<mpl::tag> tags) {
+const MessageBase* ProcessBase::fetchFromBuffer(mpl::status& status, int sourceRank, const std::vector<mpl::tag>& tags) {
   std::function<bool(std::pair<const MessageBase*, mpl::status>)> predicate;
   if (sourceRank == mpl::any_source) {
     predicate = [tags](std::pair<const MessageBase*, mpl::status> message) {
@@ -58,7 +58,7 @@ void ProcessBase::receiveMultiTag(
     std::unordered_map<int, std::function<void(const MessageBase*, const mpl::status&)>> messageHandlers) {
   std::vector<mpl::tag> tags(messageHandlers.size());
   for (const auto& element : messageHandlers) {
-    tags.push_back((MessageType)element.first);
+    tags.emplace_back((MessageType)element.first);
   }
   mpl::status status;
   const MessageBase* bufferedMessage =
@@ -93,7 +93,7 @@ void ProcessBase::receiveMultiTag(
         if (receiveMultiTagHandle<Swap>(sourceRank, probe.tag(), messageHandlers)) return;
         break;
       default:
-        // should never reach here
+        // Should never reach here
         log("Received unexpected message. Committing suicide.");
         return;
     }
