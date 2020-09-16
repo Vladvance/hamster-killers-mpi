@@ -10,6 +10,8 @@ int randomInt(int min, int max) {
 }
 
 const int Landlord::landlordRank = 0;
+int Landlord::minHamstersPerContract = 10;
+int Landlord::maxHamstersPerContract = 20;
 
 Landlord::Landlord(const mpl::communicator& communicator)
     : ProcessBase(communicator, "LANDLORD"),
@@ -48,9 +50,7 @@ void Landlord::run(int maxRounds) {
 
 void Landlord::doHire() {
   contracts.clear();
-  // Number of contracts equal to number of gnomes, FOR TESTING PURPOSE
-  int numberOfContracts = numberOfGnomes;
-  // int numberOfContracts = randomInt(1, numberOfGnomes);
+  int numberOfContracts = randomInt(1, numberOfGnomes);
 
   // Generate random contracts
   for (int i = 0; i < numberOfContracts; ++i) {

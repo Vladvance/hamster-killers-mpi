@@ -5,6 +5,9 @@
 #include "landlord.h"
 #include "mpi_types.h"
 
+int Gnome::swordsTotal = 5;
+int Gnome::poisonTotal = 30;
+
 Gnome::Gnome(const mpl::communicator &communicator)
     : ProcessBase(communicator, "GNOME"),
       numberOfGnomes(communicator.size() - 1),
@@ -115,7 +118,6 @@ void Gnome::doTakingInventory() {
     log("Broadcasting ALLOCATE_ARMOR to other gnomes");
     AllocateArmor message{};
     broadcast(message, ALLOCATE_ARMOR);
-    log("I'm ready TO KILL!!!");
     state = RAMPAGE;
     return;
   }
@@ -178,6 +180,7 @@ void Gnome::doDelegatingPriority() {
 }
 
 void Gnome::doRampage() {
+  log("I'm ready TO KILL!!!");
   // Sleep time proportional to number of hamsters to kill, *fairness noises*
   usleep(contracts[currentContractId].numberOfHamsters * 1e5);
   log("Wildly murdered %d hamsters and completed my contract (CONTRACT_ID: %d).",

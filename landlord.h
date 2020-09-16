@@ -18,8 +18,8 @@ class Landlord : public ProcessBase {
 
  public:
   static const int landlordRank;
-  static const int minHamstersPerContract = 10;
-  static const int maxHamstersPerContract = 20;
+  static int minHamstersPerContract;
+  static int maxHamstersPerContract;
 
   explicit Landlord(const mpl::communicator& communicator);
   void run(int maxRounds) override;

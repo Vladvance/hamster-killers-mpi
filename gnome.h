@@ -81,8 +81,8 @@ class Gnome : public ProcessBase {
   void handleAllocateArmorDelegating(const MessageBase* message, const mpl::status& status);
 
  public:
-  static const int swordsTotal = 5;
-  static const int poisonTotal = 20;
+  static int swordsTotal;
+  static int poisonTotal;
 
   explicit Gnome(const mpl::communicator& communicator);
   void run(int maxRounds) override;
