@@ -1,7 +1,6 @@
-#include "landlord.h"
-
 #include <random>
 
+#include "landlord.h"
 #include "mpi_types.h"
 
 std::random_device randomDevice;

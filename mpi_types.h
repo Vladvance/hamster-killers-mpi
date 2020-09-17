@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "google-explicit-constructor"
-#pragma ide diagnostic ignored "cppcoreguidelines-pro-type-member-init"
 #ifndef MPI_TYPES_H_
 #define MPI_TYPES_H_
 
