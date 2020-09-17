@@ -14,6 +14,7 @@ int Landlord::maxHamstersPerContract = 20;
 
 Landlord::Landlord(const mpl::communicator& communicator)
     : ProcessBase(communicator, "LANDLORD"),
+      minValidContractId(0),
       numberOfGnomes(communicator.size() - 1) {}
 
 void Landlord::run(int maxRounds) {
@@ -48,19 +49,20 @@ void Landlord::run(int maxRounds) {
 }
 
 void Landlord::doHire() {
+  minValidContractId += contracts.size();
   contracts.clear();
   int numberOfContracts = randomInt(1, numberOfGnomes);
 
   // Generate random contracts
-  for (int i = 0; i < numberOfContracts; ++i) {
+  for (int i = 0, contractId = minValidContractId; i < numberOfContracts; ++i) {
     int numberOfHamsters =
         randomInt(minHamstersPerContract, maxHamstersPerContract);
-    contracts.emplace_back(i, numberOfHamsters);
-    log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", i, numberOfHamsters);
+    log("I have new contract: [ ID: %d, NUM_HAMSTERS: %d ]", contractId, numberOfHamsters);
+    contracts.emplace_back(contractId++, numberOfHamsters);
   }
   isCompleted.resize(numberOfContracts);
   std::fill(isCompleted.begin(), isCompleted.end(), false);
-  log("Total num of contracts in this wave: %d", numberOfContracts);
+  log("Total number of contracts in this wave: %d", numberOfContracts);
 
   // Send contracts to gnomes
   log("Broadcasting contract list.");
@@ -73,7 +75,7 @@ void Landlord::doReadGandhi() {
   ContractCompleted message{};
   const auto& status = receiveAny(message, CONTRACT_COMPLETED);
   int contractId = message.contractId;
-  isCompleted[contractId] = true;
+  isCompleted[contractId - minValidContractId] = true;
   log("I was informed that GNOME %d has murdered all %d hamsters and so completed his contract (ID : %d)",
       status.source(), contracts[contractId].numberOfHamsters, contractId);
 

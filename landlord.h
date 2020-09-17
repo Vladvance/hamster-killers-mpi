@@ -12,6 +12,7 @@ class Landlord : public ProcessBase {
   LandlordState state;
   std::vector<Contract> contracts;
   std::vector<bool> isCompleted;
+  int minValidContractId;
 
   void doHire();
   void doReadGandhi();

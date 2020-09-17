@@ -51,6 +51,17 @@ class ProcessBase {
   }
 
   template <typename T /* extends MessageBase */>
+  void flush(mpl::tag tag) {
+    T message;
+    auto probe = communicator.iprobe(mpl::any_source, tag);
+    while (probe.first) {
+      auto status = probe.second;
+      communicator.recv(message, status.source(), status.tag());
+      probe = communicator.iprobe(mpl::any_source, tag);
+    }
+  }
+
+  template <typename T /* extends MessageBase */>
   void send(T& message, int recipientRank, mpl::tag tag) {
     lamportClock++;
     setTimestamp(message);

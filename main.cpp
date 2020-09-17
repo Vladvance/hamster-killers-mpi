@@ -11,7 +11,7 @@
 #define DEBUG
 
 void signal_callback_handler(int signum) {
-  printf("[Rank: %d] (DEAD): I was wildly killed by unknown force.",
+  printf("[Rank: %d] (DEAD): I was wildly killed by unknown force.\n",
          mpl::environment::comm_world().rank());
 }
 
