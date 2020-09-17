@@ -1,58 +1,91 @@
-#ifndef GNOME_ROUTINE_H
-#define GNOME_ROUTINE_H
+#ifndef GNOME_H_
+#define GNOME_H_
 
-#include <mpl/mpl.hpp>
 #include "mpi_types.h"
+#include "process_base.h"
 
-class gnome {
- public:
-  explicit gnome(const mpl::communicator& comm_world) :
-      comm_world(comm_world),
-      rank(comm_world.rank()),
-      size(comm_world.size()),
-      gnomes_num(size - 1),
-      contract_queue(gnomes_num),
-      is_completed(gnomes_num),
-      ranks_in_rampage(gnomes_num)
-  {
-    armory_queue.reserve(gnomes_num);
+struct ContractQueueItem {
+  int rank;
+  RequestForContract request;
+
+  bool operator<(const ContractQueueItem& rhs) const {
+    return (request == rhs.request) ? (rank < rhs.rank)
+                                    : (request < rhs.request);
   }
-  void run();
- private:
 
-  // Constants
-  static const int gnome_first = 1;
-  static const int S = 10;
-  static const int P = 20;
-
-  const mpl::communicator& comm_world;
-
-  const int rank;
-  const int size;
-  const int gnomes_num;
-  int lamport_clock {0};
-  int contracts_num {0};
-  int swords_needed {0};
-  int poison_kits_needed {0};
-  int blood_hunger {0};
-  int my_contract_id {0};
-
-  std::vector<struct contract> contracts;
-  std::vector<struct contract_queue_item> contract_queue;
-  std::vector<struct armory_allocation_item> armory_queue;
-  std::vector<bool> is_completed;
-  std::vector<bool> ranks_in_rampage;
-//  std::priority_queue<struct armory_allocation_item> aa_queue;
-
-  int get_contract_id();
-  void broadcast_rfc();
-  void broadcast_rfa();
-  void broadcast_aa() const;
-  void receive_rfa(int source);
-  void receive_all_rfc();
-  int get_contracts_from_landlord();
-  void broadcast_cc() const;
-  std::vector<armory_allocation_item>::iterator aa_queue_find_position();
+  bool operator==(const ContractQueueItem& rhs) const {
+    return (rank == rhs.rank && request == rhs.request);
+  }
 };
 
-#endif //GNOME_ROUTINE_H
+struct ArmoryAllocationItem {
+  int rank;
+  struct RequestForArmor request;
+
+  ArmoryAllocationItem() = default;
+  ArmoryAllocationItem(const int rank, const RequestForArmor& request)
+      : rank(rank), request(request) {}
+
+  bool operator<(const ArmoryAllocationItem& rhs) const {
+    return (request == rhs.request) ? (rank < rhs.rank)
+                                    : (request < rhs.request);
+  }
+
+  bool operator==(const ArmoryAllocationItem& rhs) const {
+    return (rank == rhs.rank && request == rhs.request);
+  }
+};
+
+class Gnome : public ProcessBase {
+ private:
+  enum GnomeState {
+    PEACE_IS_A_LIE,
+    GATHER_PARTY,
+    TAKING_INVENTORY,
+    DELEGATING_PRIORITY,
+    RAMPAGE,
+    FINISH
+  };
+  const int numberOfGnomes;
+
+  GnomeState state;
+  int bloodHunger;
+  int swordsNeeded;
+  int poisonNeeded;
+  int currentContractId;
+  int swapRank;
+  std::vector<Contract> contracts;
+  std::vector<ContractQueueItem> contractQueue;
+  std::vector<ArmoryAllocationItem> armoryQueue;
+  std::vector<ArmoryAllocationItem>::iterator positionInArmoryQueue;
+  std::vector<Swap> swapQueue;
+
+  void doPeaceIsALie();
+  void doGatherParty();
+  void doTakingInventory();
+  void doDelegatingPriority();
+  void doRampage();
+
+  std::vector<int> getAllGnomeRanks() const;
+  std::vector<int> getEmployedGnomeRanks();
+  bool getContract();
+  int findSwapCandidate();
+  void applySwap(const Swap& swap);
+
+  void handleRequestForArmor(const MessageBase* message, const mpl::status& status);
+  void handleContractCompleted(const MessageBase* message, const mpl::status& status);
+  void handleSwap(const MessageBase* message, const mpl::status& status);
+  void handleDelegatePriority(const mpl::status &status);
+
+  void handleSwapDelegating(const MessageBase* message, const mpl::status& status);
+  void handleAllocateArmorDelegating(const MessageBase* message, const mpl::status& status);
+
+ public:
+  static int swordsTotal;
+  static int poisonTotal;
+
+  explicit Gnome(const mpl::communicator& communicator);
+  void run(int maxRounds) override;
+};
+
+#endif  // GNOME_H_

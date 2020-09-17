@@ -1,37 +1,42 @@
+#include <unistd.h>
+
+#include <csignal>
 #include <mpl/mpl.hpp>
 
-#include "landlord.h"
-#include "gnome.h"
-#include "common.h"
+#include "arg_parser.h"
 #include "ascii_art.h"
-#include <csignal>
-#include <unistd.h>
+#include "gnome.h"
+#include "landlord.h"
 
 #define DEBUG
 
-static int rank;
-static int lamport_clock;
-
 void signal_callback_handler(int signum) {
-  debug("(DEAD): I was wildly killed by unknown force.")
+  printf("[Rank: %d] (DEAD): I was wildly killed by unknown force.",
+         mpl::environment::comm_world().rank());
 }
 
 int main(int argc, char **argv) {
-  const mpl::communicator& comm_world(mpl::environment::comm_world());
-  rank = comm_world.rank();
-  lamport_clock = 0;
+  auto config = ArgParser::parse(argc, argv);
+  Landlord::minHamstersPerContract = config.minHamstersPerContract;
+  Landlord::maxHamstersPerContract = config.maxHamstersPerContract;
+  Gnome::swordsTotal = config.swordsTotal;
+  Gnome::poisonTotal = config.poisonTotal;
+
+  const mpl::communicator &comm_world(mpl::environment::comm_world());
 
   signal(SIGINT, signal_callback_handler);
   signal(SIGTERM, signal_callback_handler);
 
-  if (comm_world.rank() == LANDLORD_RANK) { //if landlord
+  if (comm_world.rank() == Landlord::landlordRank) {
     std::puts(header);
-    landlord landlord(mpl::environment::comm_world());
-    landlord.run();
+    printf("There are %d swords and %d poison kits available.\n",
+           Gnome::swordsTotal, Gnome::poisonTotal);
+    Landlord landlord(comm_world);
+    landlord.run(config.maxRounds);
   } else {
     usleep(1000);
-    gnome gnome(mpl::environment::comm_world());
-    gnome.run();
+    Gnome gnome(comm_world);
+    gnome.run(config.maxRounds);
   }
 
   return EXIT_SUCCESS;
