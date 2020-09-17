@@ -35,7 +35,7 @@ struct RequestForContract : public MessageBase {
 
   bool operator<(const RequestForContract &rhs) const {
     return (bloodHunger == rhs.bloodHunger) ? (timestamp < rhs.timestamp)
-                                            : (bloodHunger < rhs.bloodHunger);
+                                            : (bloodHunger > rhs.bloodHunger);
   }
 
   bool operator==(const RequestForContract &rhs) const {

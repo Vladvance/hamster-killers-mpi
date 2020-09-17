@@ -77,7 +77,7 @@ void Landlord::doReadGandhi() {
   int contractId = message.contractId;
   isCompleted[contractId - minValidContractId] = true;
   log("I was informed that GNOME %d has murdered all %d hamsters and so completed his contract (ID : %d)",
-      status.source(), contracts[contractId].numberOfHamsters, contractId);
+      status.source(), contracts[contractId - minValidContractId].numberOfHamsters, contractId);
 
   if (std::all_of(isCompleted.begin(), isCompleted.end(), [](bool completed) { return completed; })) {
     state = FINISH;
