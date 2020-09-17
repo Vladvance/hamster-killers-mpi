@@ -52,6 +52,7 @@ class Gnome : public ProcessBase {
   int bloodHunger;
   int swordsNeeded;
   int poisonNeeded;
+  int minValidContractId;
   int currentContractId;
   int swapRank;
   std::vector<Contract> contracts;
@@ -66,8 +67,9 @@ class Gnome : public ProcessBase {
   void doDelegatingPriority();
   void doRampage();
 
+  const Contract& getContractById(int id) const;
   std::vector<int> getAllGnomeRanks() const;
-  std::vector<int> getEmployedGnomeRanks();
+  std::vector<int> getEmployedGnomeRanks() const;
   bool getContract();
   int findSwapCandidate();
   void applySwap(const Swap& swap);

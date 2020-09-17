@@ -11,6 +11,7 @@ int Gnome::poisonTotal = 30;
 Gnome::Gnome(const mpl::communicator &communicator)
     : ProcessBase(communicator, "GNOME"),
       numberOfGnomes(communicator.size() - 1),
+      minValidContractId(0),
       bloodHunger(0) {}
 
 void Gnome::run(int maxRounds) {
@@ -58,6 +59,7 @@ void Gnome::run(int maxRounds) {
 
 void Gnome::doPeaceIsALie() {
   log("Looking forward for new contracts");
+  minValidContractId += contracts.size();
   receiveVector(contracts, Landlord::landlordRank, CONTRACTS);
   log("Received contract list.");
 
@@ -82,6 +84,10 @@ void Gnome::doGatherParty() {
         request.timestamp, status.source());
   }
 
+  flush<AllocateArmor>(ALLOCATE_ARMOR);
+  flush<DelegatePriority>(DELEGATE_PRIORITY);
+  flush<Swap>(SWAP);
+
   // If we didn't get a contract, increase blood hunger and finish round
   if (!getContract()) {
     log("No work for me. Gonna rest a bit.");
@@ -102,13 +108,14 @@ void Gnome::doGatherParty() {
   armoryQueue.emplace_back(rank, request);
   positionInArmoryQueue = armoryQueue.begin();
 
-  swordsNeeded = numberOfGnomes;
+  swordsNeeded = contracts.size();
   poisonNeeded = 0;
   for (auto contract : contracts) {
     poisonNeeded += contract.numberOfHamsters;
   }
 
-  log("Gonna take some stuff from armoury.");
+  log("Gonna take some stuff from armoury, swords_needed = %d, poison_kits_needed = %d",
+        swordsNeeded, poisonNeeded);
   state = TAKING_INVENTORY;
 }
 
@@ -182,9 +189,9 @@ void Gnome::doDelegatingPriority() {
 void Gnome::doRampage() {
   log("I'm ready TO KILL!!!");
   // Sleep time proportional to number of hamsters to kill, *fairness noises*
-  usleep(contracts[currentContractId].numberOfHamsters * 1e5);
+  usleep(getContractById(currentContractId).numberOfHamsters * 1e5);
   log("Wildly murdered %d hamsters and completed my contract (CONTRACT_ID: %d).",
-      contracts[currentContractId].numberOfHamsters, currentContractId);
+      getContractById(currentContractId).numberOfHamsters, currentContractId);
   log("Broadcasting CONTRACT_COMPLETE");
   ContractCompleted message(currentContractId);
   broadcast(message, CONTRACT_COMPLETED);
@@ -194,6 +201,10 @@ void Gnome::doRampage() {
   state = FINISH;
 }
 
+const Contract& Gnome::getContractById(int id) const {
+  return contracts[id - minValidContractId];
+}
+
 std::vector<int> Gnome::getAllGnomeRanks() const {
   auto ranks = std::vector<int>(numberOfGnomes + 1);
   std::iota(ranks.begin(), ranks.end(), 0);
@@ -201,7 +212,7 @@ std::vector<int> Gnome::getAllGnomeRanks() const {
   return ranks;
 }
 
-std::vector<int> Gnome::getEmployedGnomeRanks() {
+std::vector<int> Gnome::getEmployedGnomeRanks() const {
   std::vector<int> ranks(contracts.size());
   for (int i = 0; i < contracts.size(); i++) {
     ranks[i] = contractQueue[i].rank;
@@ -233,7 +244,7 @@ bool Gnome::getContract() {
 
 int Gnome::findSwapCandidate() {
   int maxPoisonAvailable =
-      poisonTotal - (poisonNeeded - contracts[currentContractId].numberOfHamsters);
+      poisonTotal - (poisonNeeded - getContractById(currentContractId).numberOfHamsters);
   // If exceeding even without this gnome, nobody can fit
   if (maxPoisonAvailable <= 0 || swordsNeeded > swordsTotal) {
     return rank;
@@ -241,14 +252,14 @@ int Gnome::findSwapCandidate() {
   auto swapWith = std::find_if(
       std::next(positionInArmoryQueue), armoryQueue.end(),
       [this, maxPoisonAvailable](const auto &item) {
-        return contracts[item.request.contractId].numberOfHamsters <= maxPoisonAvailable;
+        return getContractById(item.request.contractId).numberOfHamsters <= maxPoisonAvailable;
       });
   if (swapWith == armoryQueue.end()) {
     return rank;
   }
   log("Initiating swap with %d, he has %d hamsters to kill, and I have %d",
-      swapWith->rank, contracts[swapWith->request.contractId].numberOfHamsters,
-      contracts[currentContractId].numberOfHamsters);
+      swapWith->rank, getContractById(swapWith->request.contractId).numberOfHamsters,
+      getContractById(currentContractId).numberOfHamsters);
   return swapWith->rank;
 }
 
@@ -260,12 +271,12 @@ void Gnome::applySwap(const Swap &swap) {
       armoryQueue.begin(), armoryQueue.end(),
       [swap](const auto &item) { return item.rank == swap.delegatedRank; });
   if (swap1 < positionInArmoryQueue && positionInArmoryQueue < swap2) {
-    auto difference = contracts[swap1->request.contractId].numberOfHamsters -
-                      contracts[swap2->request.contractId].numberOfHamsters;
+    auto difference = getContractById(swap1->request.contractId).numberOfHamsters -
+                      getContractById(swap2->request.contractId).numberOfHamsters;
     poisonNeeded -= difference;
   } else if (swap.delegatingRank == rank) {
     for (auto it = std::next(positionInArmoryQueue); it <= swap2; ++it) {
-      poisonNeeded += contracts[it->request.contractId].numberOfHamsters;
+      poisonNeeded += getContractById(it->request.contractId).numberOfHamsters;
     }
     positionInArmoryQueue = swap2;
   }
@@ -274,15 +285,16 @@ void Gnome::applySwap(const Swap &swap) {
 }
 
 void Gnome::handleRequestForArmor(const MessageBase *message, const mpl::status &status) {
-  log("Received REQUEST_FOR_ARMOR from GNOME %d", status.source());
   auto &request = *static_cast<const RequestForArmor *>(message);
+  if (request.contractId < minValidContractId) return;
+  log("Received REQUEST_FOR_ARMOR from GNOME %d", status.source());
   ArmoryAllocationItem queueItem(status.source(), request);
   armoryQueue.push_back(queueItem);
 
   if ((*positionInArmoryQueue) < queueItem) {
     auto contractId = queueItem.request.contractId;
     swordsNeeded--;
-    poisonNeeded -= contracts[contractId].numberOfHamsters;
+    poisonNeeded -= getContractById(contractId).numberOfHamsters;
     log("Updated my resource requirements: swords_needed = %d, poison_kits_needed = %d",
         swordsNeeded, poisonNeeded);
   }
@@ -299,7 +311,7 @@ void Gnome::handleRequestForArmor(const MessageBase *message, const mpl::status 
     for (const auto &item : armoryQueue) {
       log("[ CLOCK: %2d; RANK: %2d; CONTRACT_ID: %2d; NUM_HAMSTERS: %2d ]",
           item.request.timestamp, item.rank, item.request.contractId,
-          contracts[item.request.contractId].numberOfHamsters);
+          getContractById(item.request.contractId).numberOfHamsters);
     }
 
     positionInArmoryQueue =
@@ -312,11 +324,12 @@ void Gnome::handleRequestForArmor(const MessageBase *message, const mpl::status 
 }
 
 void Gnome::handleContractCompleted(const MessageBase *message, const mpl::status &status) {
-  log("Received CONTRACT_COMPLETED from GNOME %d.", status.source());
   auto &report = *static_cast<const ContractCompleted *>(message);
   auto contractId = report.contractId;
+  if (contractId < minValidContractId) return;
+  log("Received CONTRACT_COMPLETED from GNOME %d.", status.source());
   swordsNeeded--;
-  poisonNeeded -= contracts[contractId].numberOfHamsters;
+  poisonNeeded -= getContractById(contractId).numberOfHamsters;
 }
 
 void Gnome::handleSwap(const MessageBase *message, const mpl::status &status) {

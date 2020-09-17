@@ -1,4 +1,4 @@
-#ifndef MPI_HAMSTER_KILLERS__ASCII_ART_H
+#ifndef MPI_HAMSTER_KILLERS_ASCII_ART_H
 #define MPI_HAMSTER_KILLERS_ASCII_ART_H
 
 static const char header[] = R"(
@@ -10,4 +10,4 @@ static const char header[] = R"(
 )";
 
 
-#endif //MPI_HAMSTER_KILLERS__ASCII_ART_H
+#endif //MPI_HAMSTER_KILLERS_ASCII_ART_H
