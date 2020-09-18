@@ -45,9 +45,11 @@ class ProcessBase {
 
   template <typename... Args>
   void log(char const* const format, Args const&... args) const {
-    printf("%c[%d;%dm [Rank: %2d] [Clock: %3d] [%s] ", 27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamportClock, role);
-    printf(format, args...);
-    printf("%c[%d;%dm\n", 27,0,37);
+    char buf[256];
+    auto len1 = sprintf(buf, "%c[%d;%dm [Rank: %2d] [Clock: %3d] [%s] ", 27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamportClock, role);
+    auto len2 = sprintf(buf+len1, format, args...);
+    sprintf(buf+len1+len2, "%c[%d;%dm\n", 27,0,37);
+    printf(buf);
   }
 
   template <typename T /* extends MessageBase */>
