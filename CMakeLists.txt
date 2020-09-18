@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_executable(MPI_hamster_killers main.cpp arg_parser.cpp process_base.cpp gnome.cpp landlord.cpp)
 include_directories(./include)
+set(MPI_EXECUTABLE_SUFFIX ".openmpi")
 find_package(MPI REQUIRED)
 
 # For supporting CMake < 3.9:
